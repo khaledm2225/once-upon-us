@@ -11,6 +11,18 @@
     <main id="start-page">
       <div class="start-card">
         <h1>Once Upon Us</h1>
+        <form id="gift-form" class="gift" autocomplete="off">
+          <fieldset>
+            <legend>Names on the cover</legend>
+            <div class="names">
+              <input id="name1" name="name1" aria-label="First name" maxlength="24" />
+              <span aria-hidden="true">&amp;</span>
+              <input id="name2" name="name2" aria-label="Second name" maxlength="24" />
+            </div>
+          </fieldset>
+          <label for="dedication">Dedication</label>
+          <textarea id="dedication" name="dedication" rows="4" maxlength="240"></textarea>
+        </form>
         <button id="enter-vr" type="button" disabled>Enter VR</button>
         <p id="start-note">Preparing the book…</p>
       </div>
