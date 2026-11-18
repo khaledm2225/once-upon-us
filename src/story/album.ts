@@ -32,6 +32,14 @@ export function dateLabel(month: number | null, year: number): string {
   return month === null ? String(year) : `${MONTHS[month]} ${year}`;
 }
 
+/** Reads a label like "August 1968" or "1968" back into its month and year. */
+export function readDateLabel(label: string): { month: number | null; year: number | null } {
+  const [first, second] = label.trim().split(/\s+/);
+  const month = second === undefined ? -1 : MONTHS.indexOf(first as (typeof MONTHS)[number]);
+  const year = Number.parseInt(second ?? first, 10);
+  return { month: month >= 0 ? month : null, year: Number.isFinite(year) ? year : null };
+}
+
 const demo = (file: string, date: string): AlbumPhoto => ({
   src: `${import.meta.env.BASE_URL}album/${file}`,
   date,
