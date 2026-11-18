@@ -93,6 +93,38 @@ export function playThump(): void {
   rustle(0.09, 700, 400, 0.7, 0.1, 0.004);
 }
 
+/** Warm notes for the album photos, a calm pentatonic run (Hz). */
+const MEMORY_NOTES = [261.63, 293.66, 329.63, 392.0, 440.0, 392.0, 329.63, 293.66] as const;
+
+/**
+ * A photo rises from the album: a soft, slow swell of two warm notes, like
+ * the score of an old winter film, with a breath of paper air on top.
+ */
+export function playMemory(order: number): void {
+  const ctx = ready();
+  if (!ctx || !master) return;
+  const now = ctx.currentTime;
+  const root = MEMORY_NOTES[order % MEMORY_NOTES.length];
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 1400;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.07, now + 0.7);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
+  filter.connect(gain).connect(master);
+  for (const [ratio, type] of [[1, 'triangle'], [1.5, 'sine'], [2, 'sine']] as const) {
+    const tone = ctx.createOscillator();
+    tone.type = type;
+    tone.frequency.value = root * ratio;
+    tone.detune.value = ratio === 2 ? 6 : 0;
+    tone.connect(filter);
+    tone.start(now);
+    tone.stop(now + 3.3);
+  }
+  rustle(0.6, 5200, 2600, 0.6, 0.025, 0.25);
+}
+
 /** Quiet rain, 0 (silent) to 1 (full), following how open page 1 is. */
 export function setRain(level: number): void {
   const ctx = ready();

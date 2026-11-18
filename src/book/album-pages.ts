@@ -3,6 +3,7 @@ import {
   type Entity,
   Group,
   Mesh,
+  MeshBasicMaterial,
   MeshLambertMaterial,
   PlaneGeometry,
   SRGBColorSpace,
@@ -11,7 +12,7 @@ import {
 } from '@iwsdk/core';
 
 import { LAYOUT } from '../layout.js';
-import { setFont } from '../paint/text.js';
+import { FONT_FAMILY, setFont } from '../paint/text.js';
 import { bestAnisotropy, makeCanvas, toTexture } from '../paint/textures.js';
 import { ALBUM_SIZE, type AlbumPhoto } from '../story/album.js';
 import { AlbumPrint } from './album-components.js';
@@ -57,8 +58,14 @@ export interface PrintSlot {
   frame: Mesh;
   photoMaterial: MeshLambertMaterial;
   frameMaterial: MeshLambertMaterial;
-  /** The resting height of the group above its face, along the face normal. */
+  /** The date written across the photo while it is shown, and its full width. */
+  title: Mesh;
+  titleMaterial: MeshBasicMaterial;
+  titleWidth: number;
+  /** Where the print rests on its page: height along the face normal, then x and z. */
   restY: number;
+  restX: number;
+  restZ: number;
   /** Where the slow camera move drifts toward inside the photo (0 to 1). */
   anchor: { x: number; y: number };
   hasPhoto: boolean;
@@ -131,6 +138,29 @@ function frameCanvas(dw: number, dh: number, date: string, style: TextStyle): HT
   return canvas;
 }
 
+/**
+ * The date in warm, slanted letters, like a pen on an old print, with a soft
+ * lamp glow behind it, to write across a shown photo.
+ */
+function titleCanvas(date: string, dw: number, style: TextStyle): HTMLCanvasElement {
+  const height = Math.round(dw * 0.2);
+  const [canvas, ctx] = makeCanvas(dw, height);
+  const size = Math.round(height * 0.48);
+  ctx.font = `italic ${style.weight} ${size}px ${FONT_FAMILY}`;
+  ctx.letterSpacing = `${Math.round(height * 0.04)}px`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // A dark shadow keeps the date readable on any photo; a warm glow lights it.
+  ctx.shadowColor = 'rgba(20, 12, 6, 0.9)';
+  ctx.shadowBlur = Math.round(height * 0.16);
+  ctx.fillStyle = '#f3dcae';
+  ctx.fillText(date, dw / 2, height / 2);
+  ctx.shadowColor = 'rgba(224, 164, 88, 0.75)';
+  ctx.shadowBlur = Math.round(height * 0.28);
+  ctx.fillText(date, dw / 2, height / 2);
+  return canvas;
+}
+
 async function loadImage(src: string): Promise<HTMLImageElement> {
   const image = new Image();
   image.decoding = 'async';
@@ -185,7 +215,12 @@ export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL
       frame.position.z = 0.0001;
       frame.renderOrder = 2;
       photo.renderOrder = 1;
-      group.add(photo, frame);
+      const titleMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+      const title = new Mesh(new PlaneGeometry(1, 1), titleMaterial);
+      title.position.z = 0.0003;
+      title.renderOrder = 3;
+      title.visible = false;
+      group.add(photo, frame, title);
 
       const entity: Entity = world.createTransformEntity(group, { parent: book.leaves[leaf] });
       entity.addComponent(AlbumPrint, { index });
@@ -198,7 +233,12 @@ export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL
         frame,
         photoMaterial,
         frameMaterial,
+        title,
+        titleMaterial,
+        titleWidth: 0,
         restY,
+        restX: 0,
+        restZ: 0,
         anchor: ANCHORS[index % ANCHORS.length],
         hasPhoto: false,
         image: null,
@@ -220,8 +260,10 @@ export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL
     const cx = PAGE_PX.w / 2;
     const cy = printTop + ph / 2;
     const x = cx / PX_PER_M;
-    slot.group.position.x = slot.back ? LAYOUT.page.width - x : x;
-    slot.group.position.z = -LAYOUT.page.depth / 2 + cy / PX_PER_M;
+    slot.restX = slot.back ? LAYOUT.page.width - x : x;
+    slot.restZ = -LAYOUT.page.depth / 2 + cy / PX_PER_M;
+    slot.group.position.x = slot.restX;
+    slot.group.position.z = slot.restZ;
 
     // A restyle keeps the same photo: only its frame and date are reprinted.
     let photoTexture = slot.photoMaterial.map;
@@ -250,6 +292,18 @@ export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL
     // The frame canvas has more room below the print (for the date) than above.
     const extraBelow = canvas.height - (ph + SHADOW_ROOM * 2);
     slot.frame.position.y = -extraBelow / 2 / PX_PER_M;
+
+    // The date written across the lower part of the photo while it is shown.
+    const written = titleCanvas(date, dw, style);
+    slot.titleMaterial.map?.dispose();
+    const titleTexture = toTexture(written);
+    slot.titleMaterial.map = titleTexture;
+    slot.titleMaterial.needsUpdate = true;
+    world.renderer.initTexture(titleTexture);
+    slot.titleWidth = written.width / PX_PER_M;
+    const titleHeight = written.height / PX_PER_M;
+    slot.title.scale.set(slot.titleWidth, titleHeight, 1);
+    slot.title.position.y = -dh / 2 / PX_PER_M + titleHeight * 0.6;
     slot.hasPhoto = true;
     slot.image = image;
     slot.date = date;
