@@ -47,6 +47,8 @@ export interface Book {
   root: Group;
   entity: Entity;
   leaves: Entity[];
+  /** The paper mesh of each leaf; each has its own material list per face. */
+  leafMeshes: Mesh[];
   repaintCover(name1: string, name2: string): void;
 }
 
@@ -149,17 +151,27 @@ export function buildBook(world: World): Book {
   // Leaves: the cover (index 0) and 5 paper sheets, each on a pivot at the spine.
   const leafGeo = new BoxGeometry(W, LAYOUT.page.thickness, D);
   leafGeo.translate(W / 2, LAYOUT.page.thickness / 2, 0);
+  // Two draw calls per page instead of six: the back face (indices 18 to 23)
+  // uses material 1, everything else uses material 0.
+  leafGeo.clearGroups();
+  leafGeo.addGroup(0, 18, 0);
+  leafGeo.addGroup(18, 6, 1);
+  leafGeo.addGroup(24, 12, 0);
   const coverGeo = new BoxGeometry(W + over, coverT, D + 2 * over);
   coverGeo.translate((W + over) / 2, coverT / 2, 0);
   // Box faces in order: +x, -x, +y (front), -y (back), +z, -z.
-  const leafMats = [edgeMat, edgeMat, paperMat, paperMat, edgeMat, edgeMat];
+  const leafMats = [paperMat, paperMat];
+  void edgeMat;
   const coverMats = [clothMat, clothMat, coverOutsideMat, paperMat, clothMat, clothMat];
 
   const leaves: Entity[] = [];
+  const leafMeshes: Mesh[] = [];
   for (let index = 0; index < LEAF_COUNT; index++) {
     const pivot = new Group();
     pivot.name = index === 0 ? 'cover' : `leaf-${index}`;
-    const mesh = new Mesh(index === 0 ? coverGeo : leafGeo, index === 0 ? coverMats : leafMats);
+    // Each leaf gets its own list, so its two faces can print different pages.
+    const mesh = new Mesh(index === 0 ? coverGeo : leafGeo, index === 0 ? [...coverMats] : [...leafMats]);
+    leafMeshes.push(mesh);
     pivot.add(mesh);
     const rest = restRightAngle(index);
     pivot.rotation.z = rest;
@@ -181,10 +193,13 @@ export function buildBook(world: World): Book {
   // PageTurnSystem keeps only the top page on each side grabbable.
   const handleMat = new MeshBasicMaterial({ visible: false });
   const handleGeo = new BoxGeometry(0.12, 0.12, 0.12);
+  // The cover opens from anywhere along its outer edge, like a real book.
+  const coverEdgeGeo = new BoxGeometry(0.1, 0.12, D + 0.02);
   leaves.forEach((leafEntity, index) => {
-    const handle = new Mesh(handleGeo, handleMat);
+    const handle = new Mesh(index === 0 ? coverEdgeGeo : handleGeo, handleMat);
     handle.name = index === 0 ? 'cover-corner' : `leaf-${index}-corner`;
-    handle.position.set(W - 0.02, 0, D / 2 - 0.02);
+    if (index === 0) handle.position.set(W - 0.03, 0, 0);
+    else handle.position.set(W - 0.02, 0, D / 2 - 0.02);
     const handleEntity = world.createTransformEntity(handle, { parent: leafEntity });
     handleEntity.addComponent(CornerHandle, { leaf: leafEntity });
     handleEntity.addComponent(OneHandGrabbable, { rotate: false, translate: false });
@@ -221,6 +236,7 @@ export function buildBook(world: World): Book {
     root,
     entity: bookEntity,
     leaves,
+    leafMeshes,
     repaintCover: (name1, name2) => paintCover(coverTexture, name1, name2),
   };
 }

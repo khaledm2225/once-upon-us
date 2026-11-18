@@ -16,6 +16,8 @@ export default defineConfig({
     sourcemap: process.env.NODE_ENV !== 'production',
     target: 'esnext',
     rollupOptions: { input: './index.html' },
+    // A notice file with the licenses of every bundled library ships with the site.
+    license: { fileName: 'third-party-licenses.md' },
   },
   esbuild: { target: 'esnext' },
   // @drawcall/uikitml otherwise pulls a second three/@pmndrs/uikit graph

@@ -8,12 +8,22 @@ import { isBusy, topLeftLeaf, topRightLeaf } from './book-state.js';
 // This system then makes the leaf follow the hand around the spine, and on
 // release lets it finish the turn past halfway, or fall back before halfway.
 
-/** How fast a released page eases to its side (higher is faster). */
-const EASE_RATE = 5.5;
 /** The longest frame step we accept, so a long pause never makes a page jump. */
 const MAX_DELTA = 0.05;
-/** Near the spine a tiny hand move is a huge angle, so those frames are skipped. */
-const MIN_RADIUS = 0.03;
+/**
+ * The hand's height above the page is never counted below this, so a flat,
+ * low drag across the spine still turns the page smoothly instead of snapping.
+ */
+const MIN_LIFT = 0.05;
+/** Hand tracking is noisy: one frame may move a page at most this far (radians). */
+const MAX_STEP = 0.2;
+/** A released or poked page settles in this time, easing in and out (seconds). */
+const SETTLE_MIN = 0.55;
+const SETTLE_PER_HALF_TURN = 0.55;
+/** Feedback with no glow: a page lifts a little under the hand, a little more when pinched. */
+const HOVER_LIFT = 0.045;
+const PINCH_LIFT = 0.08;
+const LIFT_RATE = 10;
 
 type Hand = 'left' | 'right';
 
@@ -23,8 +33,24 @@ interface ActiveGrab {
   previousHandAngle: number;
 }
 
+interface Settle {
+  from: number;
+  to: number;
+  elapsed: number;
+  duration: number;
+}
+
 /** Events other systems listen to: "lift" when a page is picked up, "land" when it settles. */
 export const bookEvents = new EventTarget();
+
+function smoothstep(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+
+/** Which way is "toward the middle of the book" for a leaf at this angle. */
+function towardMiddle(angle: number): number {
+  return angle > Math.PI / 2 ? -1 : 1;
+}
 
 export class PageTurnSystem extends createSystem({
   leaves: { required: [Leaf] },
@@ -34,10 +60,23 @@ export class PageTurnSystem extends createSystem({
   private readonly handWorld = new Vector3();
   private readonly handLocal = new Vector3();
   private readonly grabs = new Map<Entity, ActiveGrab>();
+  private readonly settles = new Map<Entity, Settle>();
+  private readonly hoverCount = new Map<Entity, number>();
+  private readonly lift = new Map<Entity, number>();
 
   init(): void {
     this.queries.heldHandles.subscribe('qualify', (handle) => this.onGrab(handle));
     this.queries.heldHandles.subscribe('disqualify', (handle) => this.onRelease(handle));
+    // Hover feedback: IWSDK's grab pointer sends pointerenter and pointerleave
+    // to the handle when a hand comes near it.
+    this.queries.handles.subscribe('qualify', (handle) => {
+      const leaf = handle.getValue(CornerHandle, 'leaf');
+      const object = handle.object3D;
+      if (!leaf || !object) return;
+      const change = (by: number) => this.hoverCount.set(leaf, Math.max(0, (this.hoverCount.get(leaf) ?? 0) + by));
+      object.addEventListener('pointerenter' as never, () => change(1));
+      object.addEventListener('pointerleave' as never, () => change(-1));
+    });
   }
 
   private handAngle(leaf: Entity, hand: Hand): number | null {
@@ -47,8 +86,7 @@ export class PageTurnSystem extends createSystem({
     this.handLocal.copy(this.handWorld);
     book.worldToLocal(this.handLocal);
     // The spine is the book's Z axis, so the angle lives in the X/Y plane.
-    if (Math.hypot(this.handLocal.x, this.handLocal.y) < MIN_RADIUS) return null;
-    return Math.atan2(this.handLocal.y, this.handLocal.x);
+    return Math.atan2(Math.max(this.handLocal.y, MIN_LIFT), this.handLocal.x);
   }
 
   private onGrab(handle: Entity): void {
@@ -58,7 +96,11 @@ export class PageTurnSystem extends createSystem({
     const hand: Hand = grabSystem?.getHolderHand(handle) ?? 'right';
     const angle = this.handAngle(leaf, hand);
     this.grabs.set(handle, { leaf, hand, previousHandAngle: angle ?? 0 });
+    this.settles.delete(leaf);
     leaf.setValue(Leaf, 'state', LeafState.Held);
+    // The pinch is confirmed at once: the page lifts a little toward the middle.
+    const current = leaf.getValue(Leaf, 'angle') as number;
+    this.setAngle(leaf, current + towardMiddle(current) * PINCH_LIFT);
     bookEvents.dispatchEvent(new CustomEvent('lift', { detail: { leaf } }));
   }
 
@@ -76,40 +118,63 @@ export class PageTurnSystem extends createSystem({
     leaf.setValue(Leaf, 'state', LeafState.Settling);
   }
 
+  /** Sets a leaf's angle, kept between its two rest angles. */
+  private setAngle(leaf: Entity, angle: number): void {
+    const low = leaf.getValue(Leaf, 'restRight') as number;
+    const high = leaf.getValue(Leaf, 'restLeft') as number;
+    leaf.setValue(Leaf, 'angle', Math.min(high, Math.max(low, angle)));
+  }
+
   update(delta: number): void {
     const dt = Math.min(delta, MAX_DELTA);
 
-    // Held leaves follow the hand, one small angle step per frame.
+    // Held leaves follow the hand, one small, capped angle step per frame.
     for (const grab of this.grabs.values()) {
       const handAngle = this.handAngle(grab.leaf, grab.hand);
       if (handAngle === null) continue;
-      const step = Math.atan2(
+      const raw = Math.atan2(
         Math.sin(handAngle - grab.previousHandAngle),
         Math.cos(handAngle - grab.previousHandAngle),
       );
       grab.previousHandAngle = handAngle;
-      const low = grab.leaf.getValue(Leaf, 'restRight') as number;
-      const high = grab.leaf.getValue(Leaf, 'restLeft') as number;
-      const angle = grab.leaf.getValue(Leaf, 'angle') as number;
-      grab.leaf.setValue(Leaf, 'angle', Math.min(high, Math.max(low, angle + step)));
+      const step = Math.min(MAX_STEP, Math.max(-MAX_STEP, raw));
+      this.setAngle(grab.leaf, (grab.leaf.getValue(Leaf, 'angle') as number) + step);
     }
 
-    // Released leaves ease to their side, then land.
     for (const leaf of this.queries.leaves.entities) {
+      // Released or poked leaves ease in and out to their side, then land.
       if (leaf.getValue(Leaf, 'state') === LeafState.Settling) {
-        const angle = leaf.getValue(Leaf, 'angle') as number;
-        const target = leaf.getValue(Leaf, 'target') as number;
-        const next = angle + (target - angle) * (1 - Math.exp(-EASE_RATE * dt));
-        if (Math.abs(target - next) < 0.0015) {
-          leaf.setValue(Leaf, 'angle', target);
+        let settle = this.settles.get(leaf);
+        const to = leaf.getValue(Leaf, 'target') as number;
+        if (!settle || settle.to !== to) {
+          const from = leaf.getValue(Leaf, 'angle') as number;
+          settle = {
+            from,
+            to,
+            elapsed: 0,
+            duration: SETTLE_MIN + SETTLE_PER_HALF_TURN * (Math.abs(to - from) / (Math.PI / 2)),
+          };
+          this.settles.set(leaf, settle);
+        }
+        settle.elapsed += dt;
+        const t = Math.min(1, settle.elapsed / settle.duration);
+        leaf.setValue(Leaf, 'angle', settle.from + (settle.to - settle.from) * smoothstep(t));
+        if (t >= 1) {
+          this.settles.delete(leaf);
           leaf.setValue(Leaf, 'state', LeafState.Rest);
           bookEvents.dispatchEvent(new CustomEvent('land', { detail: { leaf } }));
-        } else {
-          leaf.setValue(Leaf, 'angle', next);
         }
       }
+
+      // Hover lift: only for a resting page, eased, and drawn on top of the real angle.
+      const angle = leaf.getValue(Leaf, 'angle') as number;
+      const resting = leaf.getValue(Leaf, 'state') === LeafState.Rest;
+      const wanted = resting && (this.hoverCount.get(leaf) ?? 0) > 0 ? HOVER_LIFT * towardMiddle(angle) : 0;
+      const current = this.lift.get(leaf) ?? 0;
+      const lift = current + (wanted - current) * (1 - Math.exp(-LIFT_RATE * dt));
+      this.lift.set(leaf, lift);
       const pivot = leaf.object3D;
-      if (pivot) pivot.rotation.z = leaf.getValue(Leaf, 'angle') as number;
+      if (pivot) pivot.rotation.z = angle + lift;
     }
 
     // One page at a time: only the top page on each side can be grabbed,
@@ -123,6 +188,8 @@ export class PageTurnSystem extends createSystem({
       const leaf = handle.getValue(CornerHandle, 'leaf');
       const live = handle.hasComponent(Grabbed) || (leaf !== null && (leaf === right || leaf === left));
       if (handle.object3D) handle.object3D.visible = live;
+      // A hidden handle gets no pointerleave, so its hover is cleared here.
+      if (!live && leaf) this.hoverCount.set(leaf, 0);
     }
   }
 }
