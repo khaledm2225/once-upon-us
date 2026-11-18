@@ -33,24 +33,24 @@ Families who want to give their grandparents a personal gift, and the grandparen
 
 ## Hands only
 
-It is seated and needs no controllers. Pinch a page corner and turn it like paper, or poke the large paper arrow tabs. Either hand works. On each of the 5 story spreads, a paper scene stands up as the page opens and folds flat as it closes: a rainy bus stop, a wedding, a first home, a busy dinner table and a sunset bench. Words fade in line by line. Then the album plays like a film of memories: each photo rises, its date writes itself across it, and it glides into place. The dedication waits on the last page.
+It is seated and needs no controllers. Pinch a page corner and turn it like paper, or poke the large paper arrow tabs. Either hand works. On each of the 5 story spreads, a real photo stands up as the page opens and folds flat as it closes: a shared umbrella in the rain, a wedding, a first home, a family dinner and a sunset bench. Words fade in line by line. Then the album plays like a film of memories: each photo rises, its date writes itself across it, and it glides into place. The dedication waits on the last page.
 
 There is no tutorial text in VR. While the book is closed, the cover corner lifts softly and a small paper hand shows the pinch.
 
 ## Accessibility
 
-Five switches sit on the start page and as paper buttons in front of the book: Large text, High contrast, Large tabs, Read aloud and Sound. High contrast prints bold dark ink on lighter paper and gives the pop-up paper figures thick outlines. Read aloud uses the browser's own speech voice, so it works only where the browser has one, and its switch hides itself otherwise. There is no time pressure, no flashing and no locomotion. The font is Atkinson Hyperlegible Next.
+Five switches sit on the start page and as paper buttons in front of the book: Large text, High contrast, Large tabs, Read aloud and Sound. High contrast prints bold dark ink on lighter paper. Read aloud uses the browser's own speech voice, so it works only where the browser has one, and its switch hides itself otherwise. There is no time pressure, no flashing and no locomotion. The font is Atkinson Hyperlegible Next.
 
 ## How I built it
 
-Meta IWSDK 1.1.0 and TypeScript. Pages turn with IWSDK's OneHandGrabbable, following the index fingertip. Tabs and buttons use PokeInteractable. The rest is 10 custom ECS systems. The room, the book, its paper art and sounds are made in code with canvas and Web Audio. Names and the dedication live in the link after "#". Photos are shrunk in the browser. They are saved on Cloudflare's free plan, and only when the family presses Save photos. Anyone with the gift link can see them, and they are deleted after 30 days.
+Meta IWSDK 1.1.0 and TypeScript. Pages turn with IWSDK's OneHandGrabbable, following the index fingertip. Tabs and buttons use PokeInteractable. The rest is 10 custom ECS systems. The room, the book and its sounds are made in code with canvas and Web Audio. Names and the dedication live in the link after "#". Photos are shrunk in the browser. They are saved on Cloudflare's free plan, and only when the family presses Save photos. Anyone with the gift link can see them, and they are deleted after 30 days.
 
 ## Future plans and launch date
 
 There are no future plans. Once Upon Us was made only for this competition. There is no target launch date: it is free and live now at https://once-upon-us-7yf.pages.dev.
 ```
 
-Note: 499 words (limit 500). The headings are counted.
+Note: 490 words (limit 500). The headings are counted.
 
 ## Track
 
@@ -89,10 +89,10 @@ Special award: Best Accessibility Forward Experience
 Seated and hands only. Large text, High contrast and Large tabs change inside VR with one poke, and so does Read aloud where the browser has a working voice. Big poke tabs turn pages for hands that find the pinch hard.
 
 Special award: Best First Five Minutes
-No tutorial text in VR: the cover corner lifts and a small paper hand shows the pinch, and the first pinch opens a rainy bus stop that stands up from the page.
+No tutorial text in VR: the cover corner lifts and a small paper hand shows the pinch, and the first pinch opens the first photo, standing up from the page.
 
 Special award: Boldest Original Concept
-A pop-up book needs real depth and real hands: paper scenes stand up at arm's length as the reader's own fingers open each page, and a family's own names, words and photos make it a personal gift.
+A pop-up book needs real depth and real hands: real photos stand up at arm's length as the reader's own fingers open each page, and a family's own names, words and photos make it a personal gift.
 ```
 
 ## Link to the project (Try it out)
@@ -118,7 +118,7 @@ Khaled Mohammed, developer and designer
 ```text
 1. On a Meta Quest 3 or 3S, open the Meta Quest Browser and go to https://once-upon-us-7yf.pages.dev. There is no install, no account and no sign in.
 2. Put the controllers down and use your hands. The experience is seated, so sit at a table or on a chair.
-3. Wait until the Enter VR button is active (it shows "Preparing the book…" while the book builds), then press Enter VR.
+3. Wait until the Enter VR button is active (the note under it says "Preparing the book…" while the book builds), then press Enter VR.
 4. The default book is the story of Grace and Henry, a fictional couple, with a demo album of AI generated photos.
 5. Open the cover: pinch near its outer edge and carry it over the spine, or poke the paper arrow tab on the right edge.
 6. Turn pages: pinch the near outer corner of a page and carry it past the middle. Let go before halfway and it falls back. Poke the right tab to go forward and the left tab to go back.
@@ -171,15 +171,15 @@ Rules for this video:
 - The real app only. No AI generated video.
 - Hands first and clear within the first 30 seconds.
 - No brands, logos or real people. For the gift shot, use the demo album photos from `public/album/`, never real family photos.
-- The music and the soft shimmer on each photo were made with ElevenLabs. Everything on screen is the real app.
+- The music and the soft sound on each photo were made in code. Everything on screen is the real app.
 
 Shots:
 
 1. 0:00 to 0:12. The closed book on the table in the warm lamp light. The cover corner lifts and the small paper hand shows the pinch. On screen text: "Once Upon Us. A pop-up book you open with your hands."
-2. 0:12 to 0:30. An emulated hand pinches the cover and opens it. The rainy bus stop stands up, paper rain falls, and the two lines fade in.
-3. 0:30 to 0:50. Pinch the next page and hold it half open, so the wedding scene stands half way. Let go before halfway so it falls back, then turn it fully. The string lights sway.
-4. 0:50 to 1:10. Poke the right arrow tab with a fingertip. The first home opens with its glowing window and steam. Poke again for the busy dinner table.
-5. 1:10 to 1:25. The sunset bench scene. Hold on the paper sun lowering behind the hills.
+2. 0:12 to 0:30. An emulated hand pinches the cover and opens it. The first photo stands up from the page, and the two lines fade in.
+3. 0:30 to 0:50. Pinch the next page and hold it half open, so the wedding photo stands half way. Let go before halfway so it falls back, then turn it fully.
+4. 0:50 to 1:10. Poke the right arrow tab with a fingertip. The first home photo stands up. Poke again for the family dinner photo.
+5. 1:10 to 1:25. The sunset bench photo stands up. Hold on it while its two lines fade in.
 6. 1:25 to 1:45. The photo album: each photo rises, its date writes itself across it, and it glides into place. On screen text: "Demo photos are AI generated pictures of a fictional couple."
 7. 1:45 to 1:58. Turn to the last page: the dedication.
 8. 1:58 to 2:20. Poke the paper buttons: Large text, then High contrast, then Large tabs. Show the book reprint each time. Show Read aloud only if the recording browser has a voice and it really speaks. If not, skip it.
