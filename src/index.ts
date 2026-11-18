@@ -7,6 +7,7 @@ import projectOptions from 'virtual:iwsdk-project';
 
 import { buildBook } from './book/book.js';
 import { PageTurnSystem } from './book/page-turn-system.js';
+import { TabSystem } from './book/tab-system.js';
 import { loadFonts } from './paint/text.js';
 import { setTextureQuality } from './paint/textures.js';
 import { buildRoom } from './room/room.js';
@@ -30,6 +31,12 @@ World.create(container, projectOptions).then(async (world) => {
   buildRoom(world);
   buildBook(world);
   world.registerSystem(PageTurnSystem);
+  world.registerSystem(TabSystem);
+
+  // Hand rays draw a laser line and a cursor (a sci fi look), so they are off.
+  // Pinch (grab) and poke carry every action, with either hand.
+  world.input.xr.multiPointers.left.toggleSubPointer('ray', false);
+  world.input.xr.multiPointers.right.toggleSubPointer('ray', false);
 
   // Enter VR turns on only now, when the book is ready.
   setupStartPage(world);

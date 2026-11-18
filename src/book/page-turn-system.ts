@@ -1,6 +1,7 @@
 import { type Entity, GrabSystem, Grabbed, Vector3, createSystem } from '@iwsdk/core';
 
 import { CornerHandle, Leaf, LeafState } from './book-components.js';
+import { isBusy, topLeftLeaf, topRightLeaf } from './book-state.js';
 
 // Turning a page by hand.
 // IWSDK's GrabSystem detects the pinch on a corner handle (the Grabbed tag).
@@ -27,6 +28,7 @@ export const bookEvents = new EventTarget();
 
 export class PageTurnSystem extends createSystem({
   leaves: { required: [Leaf] },
+  handles: { required: [CornerHandle] },
   heldHandles: { required: [CornerHandle, Grabbed] },
 }) {
   private readonly handWorld = new Vector3();
@@ -108,6 +110,19 @@ export class PageTurnSystem extends createSystem({
       }
       const pivot = leaf.object3D;
       if (pivot) pivot.rotation.z = leaf.getValue(Leaf, 'angle') as number;
+    }
+
+    // One page at a time: only the top page on each side can be grabbed,
+    // and nothing new can start while a page is held or still easing.
+    // Hidden handles are skipped by IWSDK's pointers; the held one stays live.
+    const leaves = this.queries.leaves.entities;
+    const busy = isBusy(leaves);
+    const right = busy ? null : topRightLeaf(leaves);
+    const left = busy ? null : topLeftLeaf(leaves);
+    for (const handle of this.queries.handles.entities) {
+      const leaf = handle.getValue(CornerHandle, 'leaf');
+      const live = handle.hasComponent(Grabbed) || (leaf !== null && (leaf === right || leaf === left));
+      if (handle.object3D) handle.object3D.visible = live;
     }
   }
 }

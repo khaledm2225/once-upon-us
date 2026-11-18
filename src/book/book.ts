@@ -8,6 +8,7 @@ import {
   MeshLambertMaterial,
   OneHandGrabbable,
   PlaneGeometry,
+  PokeInteractable,
   type World,
 } from '@iwsdk/core';
 
@@ -18,13 +19,14 @@ import {
   clothTexture,
   makeCanvas,
   paintCloth,
+  paintPaper,
   paperTexture,
   softShadowTexture,
   toTexture,
   woodTexture,
 } from '../paint/textures.js';
 import { coverNamesLine, story } from '../story/story.js';
-import { CornerHandle, Leaf, LeafState } from './book-components.js';
+import { CornerHandle, Leaf, LeafState, TurnTab } from './book-components.js';
 
 /** The cover plus 5 sheets. */
 export const LEAF_COUNT = 6;
@@ -50,6 +52,34 @@ export interface Book {
 
 const W = LAYOUT.page.width;
 const D = LAYOUT.page.depth;
+
+/** Normal tab size in meters (x across, z along the page edge). */
+export const TAB_SIZE = { x: 0.07, z: 0.1 } as const;
+/** Tabs sit toward the far side of the page edge, away from the corners. */
+const TAB_Z = -0.06;
+
+/** A paper tab with a bold ink arrow: right for forward, left for back. */
+function tabArrowTexture(direction: 1 | -1): CanvasTexture {
+  const [canvas, ctx] = makeCanvas(160, 224);
+  paintPaper(ctx, 160, 224, COLORS.paper, 41 + direction);
+  ctx.save();
+  ctx.translate(80, 112);
+  // The tab's +y face maps canvas width to the book's x axis.
+  ctx.scale(direction, 1);
+  ctx.fillStyle = COLORS.ink;
+  ctx.beginPath();
+  ctx.moveTo(-56, -18);
+  ctx.lineTo(10, -18);
+  ctx.lineTo(10, -50);
+  ctx.lineTo(62, 0);
+  ctx.lineTo(10, 50);
+  ctx.lineTo(10, 18);
+  ctx.lineTo(-56, 18);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  return toTexture(canvas);
+}
 
 function paintCover(texture: CanvasTexture, name1: string, name2: string): void {
   const canvas = texture.image as HTMLCanvasElement;
@@ -145,15 +175,34 @@ export function buildBook(world: World): Book {
     leaves.push(leafEntity);
   }
 
-  // The cover's grab box at its near outer corner. It draws nothing
-  // (hidden material) but stays a grab target.
+  // One grab box per leaf at its near outer corner. It draws nothing
+  // (hidden material) but stays a grab target. The box is centered on the
+  // page plane, so it reaches the palm above the page on either side.
+  // PageTurnSystem keeps only the top page on each side grabbable.
   const handleMat = new MeshBasicMaterial({ visible: false });
-  const coverHandle = new Mesh(new BoxGeometry(0.12, 0.1, 0.12), handleMat);
-  coverHandle.name = 'cover-corner';
-  coverHandle.position.set(W - 0.02, 0.03, D / 2 - 0.02);
-  const handleEntity = world.createTransformEntity(coverHandle, { parent: leaves[0] });
-  handleEntity.addComponent(CornerHandle, { leaf: leaves[0] });
-  handleEntity.addComponent(OneHandGrabbable, { rotate: false, translate: false });
+  const handleGeo = new BoxGeometry(0.12, 0.12, 0.12);
+  leaves.forEach((leafEntity, index) => {
+    const handle = new Mesh(handleGeo, handleMat);
+    handle.name = index === 0 ? 'cover-corner' : `leaf-${index}-corner`;
+    handle.position.set(W - 0.02, 0, D / 2 - 0.02);
+    const handleEntity = world.createTransformEntity(handle, { parent: leafEntity });
+    handleEntity.addComponent(CornerHandle, { leaf: leafEntity });
+    handleEntity.addComponent(OneHandGrabbable, { rotate: false, translate: false });
+  });
+
+  // Large paper tabs for a poke: forward on the right edge, back on the left.
+  // They sit toward the far side, well apart from the corner grab boxes.
+  const tabGeo = new BoxGeometry(TAB_SIZE.x, 0.002, TAB_SIZE.z);
+  for (const direction of [1, -1] as const) {
+    const tabMat = new MeshLambertMaterial({ map: paperTexture(256, 31) });
+    const topMat = new MeshLambertMaterial({ map: tabArrowTexture(direction) });
+    const tab = new Mesh(tabGeo, [tabMat, tabMat, topMat, tabMat, tabMat, tabMat]);
+    tab.name = direction === 1 ? 'tab-forward' : 'tab-back';
+    tab.position.set(direction * (W + over + TAB_SIZE.x / 2 - 0.004), 0.003, TAB_Z);
+    const tabEntity = world.createTransformEntity(tab, { parent: bookEntity });
+    tabEntity.addComponent(TurnTab, { direction });
+    tabEntity.addComponent(PokeInteractable);
+  }
 
   // Painted soft shadow on the table, under the book and its rest.
   const bookShadow = new Mesh(
