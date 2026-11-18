@@ -104,8 +104,10 @@ export function buildScene(world: World, scene: SceneDef, leftLeaf: Entity, righ
       emissiveIntensity: SELF_LIGHT,
       side: DoubleSide,
       ...(layer.blend
-        ? { transparent: true, depthWrite: false, opacity: 1 }
-        : { alphaTest: 0.5 }),
+        ? { transparent: true, depthWrite: false, opacity: 1, forceSinglePass: true }
+        : // Alpha to coverage smooths the cut paper edges with the GPU's
+          // antialiasing, so they don't shimmer as the head moves.
+          { alphaTest: 0.5, alphaToCoverage: true }),
     });
     // Front layers sit a hair higher, so when folded flat they lie on top.
     const lift = 0.0012 + order * 0.0011;

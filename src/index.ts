@@ -6,8 +6,11 @@ import './start/start-page.css';
 import { Color, type Material, type Mesh, World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
 
+import { buildAlbum } from './book/album-pages.js';
+import { AlbumSystem, setAlbum } from './book/album-system.js';
 import { LEAF_COUNT, buildBook } from './book/book.js';
-import { NORMAL_TEXT, paintDedicationPage, printBookText } from './book/page-text.js';
+import { printBookText } from './book/page-text.js';
+import { TextRevealSystem, setBookText } from './book/text-reveal-system.js';
 import { bookEvents } from './book/page-turn-system.js';
 import { PageTurnSystem } from './book/page-turn-system.js';
 import { TabSystem } from './book/tab-system.js';
@@ -25,7 +28,9 @@ import { buildRoom } from './room/room.js';
 import { SessionSystem } from './session/session-system.js';
 import { setupGiftForm, setupStartPage, showStartError } from './start/start-page.js';
 import { loadPage, restorePage, savePage, turnedCount } from './state/progress.js';
-import { type Gift, readGift } from './story/personalize.js';
+import { demoAlbum } from './story/album.js';
+import { fetchGiftAlbum } from './story/gift-photos.js';
+import { type Gift, isDefaultGift, readGift } from './story/personalize.js';
 
 // A warm, dim room color, so the space around the book is never black.
 const ROOM_COLOR = '#211f1d';
@@ -59,6 +64,15 @@ function hidePointerCursors(world: World): void {
   }, 1000);
 }
 
+// The gift form works from the first paint: what the family types while the
+// book is still being prepared is kept and applied once the book is ready.
+let gift: Gift = readGift();
+let applyToBook: ((next: Gift) => void) | null = null;
+setupGiftForm((next) => {
+  gift = next;
+  applyToBook?.(next);
+});
+
 World.create(container, projectOptions)
   .then(async (world) => {
   world.scene.background = new Color(ROOM_COLOR);
@@ -70,16 +84,26 @@ World.create(container, projectOptions)
   buildRoom(world);
   const book = buildBook(world);
   const text = printBookText(world, book);
+  setBookText(text);
+  const album = buildAlbum(world, book);
+  setAlbum(album);
 
-  // The gift: names on the cover and the dedication on the last page.
-  let gift: Gift = readGift();
+  // The gift: names on the cover, the family photos in the album and the
+  // dedication on the last page. The story's own book shows the demo album;
+  // a family's gift shows only the photos the family saved.
+  let albumSource = '';
   const applyGift = (next: Gift) => {
-    gift = next;
     book.repaintCover(next.name1, next.name2);
-    paintDedicationPage(text.dedicationTexture, next.dedication, NORMAL_TEXT);
+    text.setDedication(next.dedication);
+    const source = next.photos || (isDefaultGift(next) ? 'demo' : 'none');
+    if (source !== albumSource) {
+      albumSource = source;
+      if (next.photos) album.show(fetchGiftAlbum(next.photos));
+      else album.show(source === 'demo' ? demoAlbum : []);
+    }
   };
   applyGift(gift);
-  setupGiftForm(applyGift);
+  applyToBook = applyGift;
 
   // Pause and resume: back to the saved page at once, saved again on every landing.
   restorePage(book.leaves, loadPage(gift, LEAF_COUNT));
@@ -92,6 +116,8 @@ World.create(container, projectOptions)
   world.registerSystem(TabSystem);
   world.registerSystem(PopUpSystem);
   world.registerSystem(SceneMotionSystem);
+  world.registerSystem(AlbumSystem);
+  world.registerSystem(TextRevealSystem);
   world.registerSystem(SessionSystem);
 
   // Hand rays draw a laser line and a cursor (a sci fi look), so they are off.

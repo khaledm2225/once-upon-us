@@ -20,7 +20,7 @@ export function isTurned(leaf: Entity): boolean {
 export function topRightLeaf(leaves: Iterable<Entity>): Entity | null {
   let best: Entity | null = null;
   for (const leaf of leaves) {
-    if (isTurned(leaf)) continue;
+    if (isTurned(leaf) || leaf.getValue(Leaf, 'hidden')) continue;
     if (!best || (leaf.getValue(Leaf, 'index') as number) < (best.getValue(Leaf, 'index') as number)) {
       best = leaf;
     }
@@ -32,7 +32,7 @@ export function topRightLeaf(leaves: Iterable<Entity>): Entity | null {
 export function topLeftLeaf(leaves: Iterable<Entity>): Entity | null {
   let best: Entity | null = null;
   for (const leaf of leaves) {
-    if (!isTurned(leaf)) continue;
+    if (!isTurned(leaf) || leaf.getValue(Leaf, 'hidden')) continue;
     if (!best || (leaf.getValue(Leaf, 'index') as number) > (best.getValue(Leaf, 'index') as number)) {
       best = leaf;
     }

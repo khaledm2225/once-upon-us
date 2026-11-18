@@ -8,7 +8,8 @@
   --bg: #211f1d;
   --surface: #2b2826;
   --field: #34302c;
-  --line: #4a433c;
+  /* Field borders keep 3:1 contrast on the card and the field (WCAG for UI parts). */
+  --line: #857868;
   --cream: #f1e6d2;
   --muted: #bcae98;
   --camel: #c9a36b;
@@ -37,11 +38,12 @@ body {
   inset: 0;
 }
 
+/* Flex plus an auto margin centers the card, and still scrolls from the
+   top when a long photo list makes the card taller than the window. */
 #start-page {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
   padding: 16px;
   overflow-y: auto;
   background: var(--bg);
@@ -52,13 +54,25 @@ body {
 }
 
 .start-card {
+  margin: auto;
   width: min(100%, 560px);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 0 36px 32px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
+  /* clip (not hidden) rounds the corners and still lets Enter VR stick. */
+  overflow: clip;
+}
+
+/* Enter VR stays in view at the bottom while a long gift form scrolls. */
+.start-actions {
+  position: sticky;
+  bottom: -32px;
+  margin: 0 -36px -32px;
+  padding: 16px 36px 32px;
+  background: var(--surface);
+  box-shadow: 0 -12px 16px -12px rgba(0, 0, 0, 0.45);
 }
 
 /* A thin band of knit stripes, the winter sweater colors. */
@@ -102,7 +116,7 @@ body {
 .gift label {
   display: block;
   margin: 0 0 10px;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--camel);
   letter-spacing: 0.01em;
@@ -121,9 +135,10 @@ body {
 }
 
 .gift input,
+.gift select,
 .gift textarea {
   font: inherit;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   color: var(--cream);
   background: var(--field);
   border: 1.5px solid var(--line);
@@ -135,7 +150,8 @@ body {
 
 .gift input {
   flex: 1;
-  min-height: 52px;
+  /* Meta asks for 60 px targets on pages used with hands. */
+  min-height: 60px;
 }
 
 .gift textarea {
@@ -145,10 +161,140 @@ body {
 }
 
 .gift input:focus,
+.gift select:focus,
 .gift textarea:focus {
   outline: none;
   border-color: var(--camel);
   box-shadow: 0 0 0 3px rgba(201, 163, 107, 0.3);
+}
+
+/* Family photos */
+.gift .photos {
+  margin: 24px 0 0;
+}
+
+.field-hint {
+  margin: 0 0 12px;
+  font-size: 1.125rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.field-hint.status {
+  color: var(--cream);
+}
+
+.field-hint[hidden] {
+  display: none;
+}
+
+.photo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.photo-row:last-child {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+
+.photo-thumb {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--field);
+}
+
+.photo-date {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gift .photo-date select,
+.gift .photo-date input {
+  min-height: 60px;
+  padding: 10px 12px;
+  font-size: 1.125rem;
+}
+
+.gift .photo-date select {
+  flex: 1.3;
+}
+
+.gift .photo-date input {
+  flex: 1;
+  width: 0;
+}
+
+.photo-remove {
+  flex: none;
+  min-height: 60px;
+  min-width: 60px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.photo-remove:hover {
+  color: var(--cream);
+}
+
+.photo-actions {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+button.secondary {
+  flex: 1;
+  min-height: 60px;
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--cream);
+  background: transparent;
+  border: 1.5px solid var(--camel);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+button.secondary:hover:not(:disabled) {
+  background: rgba(201, 163, 107, 0.12);
+}
+
+button.secondary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.secondary[hidden] {
+  display: none;
+}
+
+.photo-remove:focus-visible,
+button.secondary:focus-visible {
+  outline: 3px solid var(--camel);
+  outline-offset: 2px;
 }
 
 #enter-vr {
@@ -187,7 +333,7 @@ body {
 
 #start-note {
   margin: 16px 0 0;
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1.4;
   color: var(--muted);
   text-align: center;
@@ -203,5 +349,81 @@ body {
   }
   .knit {
     margin: 0 -20px 24px;
+  }
+  .start-actions {
+    bottom: -24px;
+    margin: 0 -20px -24px;
+    padding: 16px 20px 24px;
+  }
+}
+
+/* A soft entrance, like the opening of a film: the card rises in, then the
+   title and each part of the form fade up one after another. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes title-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.06em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: -0.01em;
+  }
+}
+
+@keyframes knit-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.start-card {
+  animation: rise-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.knit {
+  transform-origin: left center;
+  animation: knit-in 1.1s cubic-bezier(0.65, 0, 0.35, 1) 0.2s both;
+}
+
+.start-card h1 {
+  animation: title-in 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+}
+
+.gift > *,
+.start-actions {
+  animation: rise-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gift > :nth-child(1) { animation-delay: 0.7s; }
+.gift > :nth-child(2) { animation-delay: 0.85s; }
+.gift > :nth-child(3) { animation-delay: 0.95s; }
+.gift > :nth-child(4) { animation-delay: 1.1s; }
+.start-actions { animation-delay: 1.25s; }
+
+/* New photo rows slide in softly as they are added. */
+.photo-row {
+  animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
