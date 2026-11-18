@@ -18,6 +18,7 @@ function key(gift: Gift): string {
 export function turnedCount(leaves: Iterable<Entity>): number {
   let count = 0;
   for (const leaf of leaves) {
+    if (leaf.getValue(Leaf, 'hidden')) continue;
     if ((leaf.getValue(Leaf, 'angle') as number) > Math.PI / 2) count++;
   }
   return count;

@@ -15,9 +15,9 @@ import { setFont } from '../paint/text.js';
 import { bestAnisotropy, makeCanvas, toTexture } from '../paint/textures.js';
 import { ALBUM_SIZE, type AlbumPhoto } from '../story/album.js';
 import { AlbumPrint } from './album-components.js';
-import { Leaf } from './book-components.js';
+import { Leaf, LeafState } from './book-components.js';
 import { FIRST_ALBUM_LEAF, LEAF_COUNT, type Book } from './book.js';
-import { NORMAL_TEXT, PAGE_PX, type TextStyle, paperBase } from './page-text.js';
+import { NORMAL_TEXT, PAGE_PX, type TextStyle, paperBaseTexture } from './page-text.js';
 
 // The photo album after the story: two photos on each page, like prints held
 // by dark paper photo corners, with the date under each one in the book's font.
@@ -151,7 +151,7 @@ const ANCHORS = [
 /** Gives each album page plain paper and a place for its two prints. */
 export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL_TEXT): Album {
   let style = initial;
-  let plain = toTexture(paperBase(style.paper));
+  let plain = paperBaseTexture(style.paper);
   const pageMaterials: MeshLambertMaterial[] = [];
   const pages: { leaf: number; back: boolean }[] = [{ leaf: FIRST_ALBUM_LEAF - 1, back: true }];
   for (let leaf = FIRST_ALBUM_LEAF; leaf < LEAF_COUNT; leaf++) {
@@ -223,15 +223,19 @@ export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL
     slot.group.position.x = slot.back ? LAYOUT.page.width - x : x;
     slot.group.position.z = -LAYOUT.page.depth / 2 + cy / PX_PER_M;
 
-    const photoTexture = new Texture(image);
-    photoTexture.colorSpace = SRGBColorSpace;
-    photoTexture.wrapS = ClampToEdgeWrapping;
-    photoTexture.wrapT = ClampToEdgeWrapping;
-    photoTexture.anisotropy = bestAnisotropy();
-    photoTexture.needsUpdate = true;
-    slot.photoMaterial.map?.dispose();
-    slot.photoMaterial.map = photoTexture;
-    slot.photoMaterial.needsUpdate = true;
+    // A restyle keeps the same photo: only its frame and date are reprinted.
+    let photoTexture = slot.photoMaterial.map;
+    if (!photoTexture || photoTexture.image !== image) {
+      photoTexture?.dispose();
+      photoTexture = new Texture(image);
+      photoTexture.colorSpace = SRGBColorSpace;
+      photoTexture.wrapS = ClampToEdgeWrapping;
+      photoTexture.wrapT = ClampToEdgeWrapping;
+      photoTexture.anisotropy = bestAnisotropy();
+      photoTexture.needsUpdate = true;
+      slot.photoMaterial.map = photoTexture;
+      slot.photoMaterial.needsUpdate = true;
+    }
     slot.photo.scale.set(dw / PX_PER_M, dh / PX_PER_M, 1);
 
     const canvas = frameCanvas(dw, dh, date, style);
@@ -262,6 +266,13 @@ export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL
       const entity = book.leaves[leaf];
       entity.setValue(Leaf, 'hidden', hidden);
       if (entity.object3D) entity.object3D.visible = !hidden;
+      // A put away sheet always rests on the right stack, so the book stays in order.
+      if (hidden && entity.getValue(Leaf, 'state') === LeafState.Rest) {
+        const rest = entity.getValue(Leaf, 'restRight') as number;
+        entity.setValue(Leaf, 'angle', rest);
+        entity.setValue(Leaf, 'target', rest);
+        if (entity.object3D) entity.object3D.rotation.z = rest;
+      }
     }
   };
 
@@ -298,8 +309,7 @@ export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL
     slots,
     restyle: (next) => {
       if (next.paper !== style.paper) {
-        plain.dispose();
-        plain = toTexture(paperBase(next.paper));
+        plain = paperBaseTexture(next.paper);
         for (const material of pageMaterials) {
           material.map = plain;
           material.needsUpdate = true;

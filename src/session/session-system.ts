@@ -26,7 +26,12 @@ export class SessionSystem extends createSystem({
     this.renderer.xr.addEventListener('sessionstart', () => {
       this.renderer.xr.getSession()?.addEventListener('visibilitychange', onVisibility);
     });
-    this.renderer.xr.addEventListener('sessionend', () => this.releaseAll());
+    this.renderer.xr.addEventListener('sessionend', () => {
+      this.releaseAll();
+      stopSpeaking();
+      // Back on the start page nothing plays; the next Enter VR click wakes it.
+      pauseAudio(true);
+    });
   }
 
   releaseAll(): void {

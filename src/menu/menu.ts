@@ -9,6 +9,7 @@ import {
 } from '@iwsdk/core';
 
 import { LAYOUT } from '../layout.js';
+import { groupBoxFaces } from '../paint/geometry.js';
 import { setFont } from '../paint/text.js';
 import { COLORS, makeCanvas, paintPaper, toTexture } from '../paint/textures.js';
 import type { SettingKey } from '../settings/settings.js';
@@ -23,6 +24,7 @@ export const MENU_SETTINGS: readonly { key: SettingKey; label: string }[] = [
   { key: 'highContrast', label: 'High contrast' },
   { key: 'largeTabs', label: 'Large tabs' },
   { key: 'readAloud', label: 'Read aloud' },
+  { key: 'sound', label: 'Sound' },
 ];
 
 const BUTTON = { width: 0.108, height: 0.006, depth: 0.046 } as const;
@@ -98,10 +100,7 @@ export function buildMenu(world: World): Menu {
 
   // Two draw calls per button: the printed top face, and the plain sides.
   const buttonGeo = new BoxGeometry(BUTTON.width, BUTTON.height, BUTTON.depth);
-  buttonGeo.clearGroups();
-  buttonGeo.addGroup(0, 12, 0);
-  buttonGeo.addGroup(12, 6, 1);
-  buttonGeo.addGroup(18, 18, 0);
+  groupBoxFaces(buttonGeo, [0, 0, 1, 0, 0, 0]);
   const restY = 0.0015 + BUTTON.height / 2;
   const side = new MeshLambertMaterial({ color: COLORS.paperEdge });
   const buttons: MenuButtonView[] = MENU_SETTINGS.map((setting, index) => {

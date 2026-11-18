@@ -149,7 +149,7 @@ export class PageTurnSystem extends createSystem({
     const dt = Math.min(delta, MAX_DELTA);
 
     // Held leaves follow the hand, one small, capped angle step per frame.
-    for (const grab of this.grabs.values()) {
+    if (this.grabs.size > 0) for (const grab of this.grabs.values()) {
       const handAngle = this.handAngle(grab.leaf, grab.hand);
       if (handAngle === null) continue;
       const raw = Math.atan2(

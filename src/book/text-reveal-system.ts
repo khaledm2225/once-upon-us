@@ -55,8 +55,12 @@ export class TextRevealSystem extends createSystem({
 
     if (page !== this.openPage) {
       if (busy) {
-        // A turning page carries its words along; nothing new appears yet.
-        for (const line of text.lines) if (line.page !== this.openPage) this.hide(line);
+        // A turning page carries its words along (even if a setting just
+        // reprinted them); nothing new appears yet.
+        for (const line of text.lines) {
+          if (line.page === this.openPage) this.reveal(line);
+          else this.hide(line);
+        }
         return;
       }
       this.openPage = page;
@@ -70,12 +74,17 @@ export class TextRevealSystem extends createSystem({
         if (!busy) this.hide(line);
         continue;
       }
-      const p = Math.min(1, Math.max(0, (this.clock - FIRST_DELAY - STAGGER * line.order) / APPEAR));
-      const e = easeOut(p);
-      line.group.visible = e > 0;
-      line.material.opacity = e;
-      line.group.position.z = line.restZ + RISE * (1 - e);
+      this.reveal(line);
     }
+  }
+
+  /** Shows one line as far as the film has come for its page. */
+  private reveal(line: LineSlot): void {
+    const p = Math.min(1, Math.max(0, (this.clock - FIRST_DELAY - STAGGER * line.order) / APPEAR));
+    const e = easeOut(p);
+    line.group.visible = e > 0;
+    line.material.opacity = e;
+    line.group.position.z = line.restZ + RISE * (1 - e);
   }
 
   /** Reads the newly opened page's words, in order, if read aloud is on. */

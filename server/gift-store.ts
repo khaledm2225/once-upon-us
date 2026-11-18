@@ -10,8 +10,23 @@ export const MAX_PHOTOS = 10;
 export const UPLOAD_WINDOW_MS = 30 * 60 * 1000;
 /** JPEG base64 text: a 1024 pixel photo is about 200 KB, so 450,000 letters leaves room. */
 export const MAX_JPEG_CHARS = 450_000;
-/** New photo sets per day for the whole site, so nobody can fill the free database. */
-export const MAX_GIFTS_PER_DAY = 200;
+/** New photo sets per day for the whole site. */
+export const MAX_GIFTS_PER_DAY = 20;
+/**
+ * Photos kept in total. 900 photos of at most 450,000 letters is about
+ * 405 MB, under the free plan's 500 MB per database, so the database can
+ * never fill up: past this, new photos are politely refused.
+ */
+export const MAX_PHOTOS_TOTAL = 900;
+
+/**
+ * Writes only from this site's own pages. Browsers mark every request with
+ * Sec-Fetch-Site, so another website can't use up the daily limits.
+ */
+export function fromOtherSite(request: Request): boolean {
+  const site = request.headers.get('sec-fetch-site');
+  return site !== null && site !== 'same-origin';
+}
 export const MAX_DATE_CHARS = 40;
 
 const GIFT_ID = /^[A-Za-z0-9_-]{16,64}$/;

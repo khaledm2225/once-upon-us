@@ -1,5 +1,5 @@
 import { ALBUM_SIZE, MONTHS, dateLabel } from '../story/album.js';
-import { canReadPhoto, saveGiftPhotos } from '../story/gift-photos.js';
+import { canReadPhoto, forgetUnfinishedSave, saveGiftPhotos } from '../story/gift-photos.js';
 
 // The family photos on the start page: up to 10 photos, each with its month
 // (optional) and year. "Save photos" sends them to the server as one new set,
@@ -24,6 +24,9 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
 
   let rows: Row[] = [];
   let saving = false;
+  let adding = false;
+  /** True right after a save, until the list changes again. */
+  let saved = false;
 
   const say = (text: string) => {
     status.textContent = text;
@@ -31,9 +34,21 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
   };
 
   const refresh = () => {
-    addButton.disabled = saving || rows.length >= ALBUM_SIZE;
-    saveButton.hidden = rows.length === 0;
-    saveButton.disabled = saving;
+    addButton.disabled = saving || adding || rows.length >= ALBUM_SIZE;
+    saveButton.hidden = rows.length === 0 || saved;
+    saveButton.disabled = saving || adding;
+  };
+
+  /** Any change after a save must be saved again before the link shows it. */
+  const changed = () => {
+    forgetUnfinishedSave();
+    if (saved) {
+      saved = false;
+      say('Changes not saved yet.');
+    } else {
+      say('');
+    }
+    refresh();
   };
 
   const render = () => {
@@ -55,7 +70,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
         month.value = row.month === null ? '' : String(row.month);
         month.addEventListener('change', () => {
           row.month = month.value === '' ? null : Number(month.value);
-          say('');
+          changed();
         });
 
         const year = document.createElement('input');
@@ -69,7 +84,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
         year.addEventListener('input', () => {
           const value = Number.parseInt(year.value, 10);
           row.year = Number.isFinite(value) ? value : null;
-          say('');
+          changed();
         });
 
         const date = document.createElement('div');
@@ -84,9 +99,17 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
         remove.addEventListener('click', () => {
           URL.revokeObjectURL(row.thumb);
           rows = rows.filter((other) => other !== row);
-          say('');
+          const removedLastSaved = saved && rows.length === 0;
+          changed();
           render();
           addButton.focus();
+          // Removing every saved photo takes the photos off the gift link.
+          if (removedLastSaved && hasSavedPhotos()) {
+            onSaved('');
+            saved = false;
+            say('The photos were taken off this gift link.');
+            refresh();
+          }
         });
 
         item.append(thumb, date, remove);
@@ -101,22 +124,32 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
   input.addEventListener('change', async () => {
     const files = Array.from(input.files ?? []);
     input.value = '';
-    const room = ALBUM_SIZE - rows.length;
+    if (files.length === 0) return;
+    adding = true;
+    refresh();
     let unreadable = 0;
-    for (const file of files.slice(0, room)) {
+    let skipped = 0;
+    for (const file of files) {
+      if (rows.length >= ALBUM_SIZE) {
+        skipped++;
+        continue;
+      }
       if (await canReadPhoto(file)) {
         rows.push({ file, thumb: URL.createObjectURL(file), month: null, year: null });
       } else {
         unreadable++;
       }
     }
+    adding = false;
+    changed();
     render();
     if (unreadable > 0) say('Some photos could not be read. Please choose JPEG or PNG photos.');
-    else if (files.length > room) say(`A book holds up to ${ALBUM_SIZE} photos. The first ones were added.`);
+    else if (skipped > 0) say(`A book holds up to ${ALBUM_SIZE} photos. The first ones were added.`);
     else say('Add the year of each photo, then save.');
   });
 
   saveButton.addEventListener('click', async () => {
+    if (rows.length > ALBUM_SIZE) rows = rows.slice(0, ALBUM_SIZE);
     const missing = rows.findIndex((row) => row.year === null || row.year < FIRST_YEAR || row.year > lastYear);
     if (missing >= 0) {
       say(`Please add the year of photo ${missing + 1}.`);
@@ -130,6 +163,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
         (saved, total) => say(saved < total ? `Saving photo ${saved + 1} of ${total}…` : 'Photos saved.'),
       );
       onSaved(id);
+      saved = true;
       say("Photos saved. This page's address is now the gift link, with the photos.");
     } catch (error) {
       console.warn(error);
@@ -140,7 +174,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
     }
   });
 
-  if (hasSavedPhotos()) say('This gift link already has its photos.');
+  if (hasSavedPhotos()) say('This gift link already has its photos. Saving new photos replaces them.');
   else say('');
   render();
 }

@@ -114,6 +114,8 @@ export function buildScene(world: World, scene: SceneDef, leftLeaf: Entity, righ
 
   scene.layers.forEach((layer, order) => {
     const texture = layerTexture(layer);
+    // Upload now, on the start page, so the first page turn never stutters.
+    world.renderer.initTexture(texture);
     const material = new MeshLambertMaterial({
       map: texture,
       emissive: '#ffffff',

@@ -62,6 +62,17 @@ export function paperBase(paper: string): HTMLCanvasElement {
   return grainCanvas;
 }
 
+/** One GPU texture per paper color, shared by the album and dedication pages. */
+const paperTextures = new Map<string, CanvasTexture>();
+export function paperBaseTexture(paper: string): CanvasTexture {
+  let texture = paperTextures.get(paper);
+  if (!texture) {
+    texture = toTexture(paperBase(paper));
+    paperTextures.set(paper, texture);
+  }
+  return texture;
+}
+
 /** Splits text into lines that fit the width. */
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(' ');
@@ -323,7 +334,7 @@ export function printBookText(world: World, book: Book, initial: TextStyle = NOR
   printStory();
 
   // The dedication page: plain paper on the inside of the back cover.
-  const paperMaterial = new MeshLambertMaterial({ map: toTexture(paperBase(style.paper)) });
+  const paperMaterial = new MeshLambertMaterial({ map: paperBaseTexture(style.paper) });
   const paper = new Mesh(new PlaneGeometry(LAYOUT.page.width, LAYOUT.page.depth), paperMaterial);
   paper.name = 'dedication-page';
   paper.rotation.x = -Math.PI / 2;
@@ -347,8 +358,7 @@ export function printBookText(world: World, book: Book, initial: TextStyle = NOR
 
   const restyle = (next: TextStyle) => {
     if (next.paper !== style.paper) {
-      paperMaterial.map?.dispose();
-      paperMaterial.map = toTexture(paperBase(next.paper));
+      paperMaterial.map = paperBaseTexture(next.paper);
       paperMaterial.needsUpdate = true;
     }
     style = next;

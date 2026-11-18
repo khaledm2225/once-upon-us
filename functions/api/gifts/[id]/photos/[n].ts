@@ -2,7 +2,9 @@ import {
   type Env,
   MAX_DATE_CHARS,
   MAX_JPEG_CHARS,
+  MAX_PHOTOS_TOTAL,
   UPLOAD_WINDOW_MS,
+  fromOtherSite,
   isGiftId,
   isJpegBase64,
   json,
@@ -31,6 +33,7 @@ export const onRequestGet: PagesFunction<Env, 'id' | 'n'> = async ({ env, params
 // PUT /api/gifts/<id>/photos/<n>: adds photo n to a set, once, within
 // 30 minutes of making the set. Body: {"date": "August 1968", "jpeg": "<base64>"}.
 export const onRequestPut: PagesFunction<Env, 'id' | 'n'> = async ({ env, params, request }) => {
+  if (fromOtherSite(request)) return json({ error: 'Not allowed.' }, 403);
   const id = param(params.id);
   const n = photoNumber(param(params.n));
   if (!isGiftId(id) || n === null) return json({ error: 'Not found.' }, 404);
@@ -59,12 +62,21 @@ export const onRequestPut: PagesFunction<Env, 'id' | 'n'> = async ({ env, params
     return json({ error: 'The photo or its date is not valid.' }, 400);
   }
 
+  const stored = await env.DB.prepare('SELECT COUNT(*) AS count FROM photos').first<{ count: number }>();
+  if ((stored?.count ?? 0) >= MAX_PHOTOS_TOTAL) {
+    return json({ error: 'The photo album is full right now.' }, 503);
+  }
+
   try {
     await env.DB.prepare('INSERT INTO photos (gift_id, n, date_label, jpeg) VALUES (?1, ?2, ?3, ?4)')
       .bind(id, n, date, jpeg)
       .run();
-  } catch {
-    return json({ error: 'This photo is already saved.' }, 409);
+  } catch (error) {
+    if (String(error).includes('UNIQUE constraint failed')) {
+      return json({ error: 'This photo is already saved.' }, 409);
+    }
+    console.error('Saving a photo failed.', error);
+    return json({ error: 'Saving is not available right now.' }, 503);
   }
   return json({ saved: n }, 201);
 };

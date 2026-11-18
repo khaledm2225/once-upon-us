@@ -1,9 +1,17 @@
-import { type Env, MAX_GIFTS_PER_DAY, UPLOAD_WINDOW_MS, json, newGiftId } from '../../../server/gift-store.js';
+import {
+  type Env,
+  MAX_GIFTS_PER_DAY,
+  UPLOAD_WINDOW_MS,
+  fromOtherSite,
+  json,
+  newGiftId,
+} from '../../../server/gift-store.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // POST /api/gifts: makes a new, empty photo set and returns its id.
-export const onRequestPost: PagesFunction<Env> = async ({ env }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
+  if (fromOtherSite(request)) return json({ error: 'Not allowed.' }, 403);
   // Sets that closed with no photos (an upload that never finished) are cleared.
   await env.DB.prepare('DELETE FROM gifts WHERE created_at < ?1 AND id NOT IN (SELECT gift_id FROM photos)')
     .bind(Date.now() - UPLOAD_WINDOW_MS)
