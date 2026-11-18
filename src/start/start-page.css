@@ -1,22 +1,35 @@
-/* Start page: cream paper on a warm, dim room color. No gradients, no glass. */
+/*
+  Start page: a calm, modern dark layout in winter knit colors.
+  Warm charcoal surfaces, cream text (never pure white), camel accents,
+  one rust action. Flat colors only: no gradients, no glass, no glows.
+*/
 
 :root {
-  --room: #3a2418;
-  --paper: #f6e7cf;
-  --ink: #3b2414;
-  --terracotta: #b73206;
-  --terracotta-pressed: #96290a;
-  --paper-text: #fff4e6;
-  --muted-ink: #6b4a33;
+  --bg: #211f1d;
+  --surface: #2b2826;
+  --field: #34302c;
+  --line: #4a433c;
+  --cream: #f1e6d2;
+  --muted: #bcae98;
+  --camel: #c9a36b;
+  --rust: #b4573a;
+  --rust-hover: #c2623f;
+  --rust-pressed: #9a4830;
+  --navy: #3a4152;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--room);
-  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--cream);
+  font-family: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 #scene-container {
@@ -30,8 +43,8 @@ body {
   display: grid;
   place-items: center;
   padding: 16px;
-  box-sizing: border-box;
-  background: var(--room);
+  overflow-y: auto;
+  background: var(--bg);
 }
 
 #start-page[hidden] {
@@ -39,37 +52,132 @@ body {
 }
 
 .start-card {
-  width: min(100%, 520px);
-  background: var(--paper);
-  border-radius: 6px;
-  padding: 40px 32px;
-  box-sizing: border-box;
-  text-align: center;
-  box-shadow: 0 18px 40px rgba(20, 10, 4, 0.35);
+  width: min(100%, 560px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 0 36px 32px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
 }
 
+/* A thin band of knit stripes, the winter sweater colors. */
+.knit {
+  display: flex;
+  height: 10px;
+  margin: 0 -36px 32px;
+}
+
+.knit span {
+  flex: 1;
+}
+
+.knit span:nth-child(1) { background: var(--cream); }
+.knit span:nth-child(2) { background: var(--camel); }
+.knit span:nth-child(3) { background: var(--rust); }
+.knit span:nth-child(4) { background: var(--navy); }
+.knit span:nth-child(5) { background: var(--cream); }
+.knit span:nth-child(6) { background: var(--camel); }
+
 .start-card h1 {
-  margin: 0 0 32px;
-  font-size: 2.6rem;
+  margin: 0 0 28px;
+  font-size: clamp(2rem, 6vw, 2.6rem);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.gift {
+  margin: 0 0 28px;
+}
+
+.gift fieldset {
+  border: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.gift legend,
+.gift label {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--camel);
+  letter-spacing: 0.01em;
+}
+
+.gift .names {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gift .names span {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--camel);
+}
+
+.gift input,
+.gift textarea {
+  font: inherit;
+  font-size: 1.15rem;
+  color: var(--cream);
+  background: var(--field);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gift input {
+  flex: 1;
+  min-height: 52px;
+}
+
+.gift textarea {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.gift input:focus,
+.gift textarea:focus {
+  outline: none;
+  border-color: var(--camel);
+  box-shadow: 0 0 0 3px rgba(201, 163, 107, 0.3);
 }
 
 #enter-vr {
+  display: block;
+  width: 100%;
+  min-height: 60px;
   font: inherit;
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--paper-text);
-  background: var(--terracotta);
+  letter-spacing: 0.01em;
+  color: var(--cream);
+  background: var(--rust);
   border: none;
-  border-radius: 6px;
-  padding: 18px 44px;
-  min-height: 64px;
+  border-radius: 14px;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-#enter-vr:active {
-  background: var(--terracotta-pressed);
+#enter-vr:hover:not(:disabled) {
+  background: var(--rust-hover);
+}
+
+#enter-vr:active:not(:disabled) {
+  background: var(--rust-pressed);
+}
+
+#enter-vr:focus-visible {
+  outline: 3px solid var(--camel);
+  outline-offset: 3px;
 }
 
 #enter-vr:disabled {
@@ -78,68 +186,22 @@ body {
 }
 
 #start-note {
-  margin: 20px 0 0;
-  font-size: 1.15rem;
-  color: var(--muted-ink);
-}
-
-.gift {
-  text-align: left;
-  margin: 0 0 28px;
-}
-
-.gift fieldset {
-  border: none;
-  margin: 0 0 18px;
-  padding: 0;
-}
-
-.gift legend,
-.gift label {
-  display: block;
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-
-.gift .names {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.gift .names span {
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-
-.gift input,
-.gift textarea {
-  font: inherit;
-  font-size: 1.15rem;
-  color: var(--ink);
-  background: #fffaf1;
-  border: 2px solid #c9b08c;
-  border-radius: 6px;
-  padding: 10px 12px;
-  box-sizing: border-box;
-  min-width: 0;
-}
-
-.gift input {
-  flex: 1;
-  min-height: 48px;
-}
-
-.gift textarea {
-  width: 100%;
-  resize: vertical;
+  margin: 16px 0 0;
+  font-size: 1rem;
   line-height: 1.4;
+  color: var(--muted);
+  text-align: center;
 }
 
-.gift input:focus-visible,
-.gift textarea:focus-visible,
-#enter-vr:focus-visible {
-  outline: 3px solid var(--terracotta);
-  outline-offset: 2px;
+#start-note[hidden] {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .start-card {
+    padding: 0 20px 24px;
+  }
+  .knit {
+    margin: 0 -20px 24px;
+  }
 }
