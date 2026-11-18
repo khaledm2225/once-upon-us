@@ -25,8 +25,11 @@ import {
 // One point light plus a soft fill light, and no real time shadows.
 
 const LAMP_LIGHT_COLOR = '#ffc192'; // terracotta and rust toned lamp light
-const FILL_SKY = '#e9dbc7';
-const FILL_GROUND = '#2a1c14';
+const FILL_SKY = '#9a9fd6'; // cool indigo night, like a winter cinema
+const FILL_GROUND = '#14152a';
+
+const CINEMA_VELVET = '#262a5c';
+const CINEMA_CARPET = '#1b1d3f';
 
 export interface Room {
   lampLight: PointLight;
@@ -36,15 +39,16 @@ export function buildRoom(world: World): Room {
   const room = new Group();
   room.name = 'room';
 
-  // Floor and walls: dim, warm, never black.
-  const floorMat = new MeshLambertMaterial({ map: surfaceTexture(COLORS.floor, 3) });
+  // A small night cinema in winter: deep indigo velvet walls and carpet,
+  // dim, never black, lit only by the warm lamp.
+  const floorMat = new MeshLambertMaterial({ map: surfaceTexture(CINEMA_CARPET, 3) });
   floorMat.map!.repeat.set(6, 6);
   const floor = new Mesh(new PlaneGeometry(6, 6), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(0, LAYOUT.floorY, -1);
   room.add(floor);
 
-  const wallMat = new MeshLambertMaterial({ map: surfaceTexture(COLORS.wall, 5) });
+  const wallMat = new MeshLambertMaterial({ map: surfaceTexture(CINEMA_VELVET, 5) });
   wallMat.map!.repeat.set(4, 2);
   const wallGeo = new PlaneGeometry(4.2, 3.2);
   const backWall = new Mesh(wallGeo, wallMat);

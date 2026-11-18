@@ -35,7 +35,7 @@ import { fetchGiftAlbum } from './story/gift-photos.js';
 import { type Gift, isDefaultGift, readGift } from './story/personalize.js';
 
 // A warm, dim room color, so the space around the book is never black.
-const ROOM_COLOR = '#211f1d';
+const ROOM_COLOR = '#141529';
 // Quest blurs the edges of the view to save power (foveation). Text is the
 // heart of the book, so we ask for a gentler level than the maximum.
 const FOVEATION = 0.5;
