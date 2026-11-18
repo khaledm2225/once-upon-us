@@ -23,7 +23,7 @@ import { MotionKind, PopLayer, SceneMotion } from './popup-components.js';
 /** Scene width across both pages, in meters. */
 export const SCENE_WIDTH = 0.4;
 /** Canvas pixels per meter for layer art. */
-const PX_PER_M = 2560;
+const PX_PER_M = 6400;
 /** Scenes are painted 0.40 m wide and shown 20% larger, filling the spread. */
 const SCENE_SCALE = 1.2;
 /** Moves every hinge a little toward the reader, so the tallest layer still folds inside the page. */

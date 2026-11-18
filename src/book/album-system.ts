@@ -28,11 +28,11 @@ const WRITE = 1.1;
 /** The written date fades out over this long as the photo starts down. */
 const UNWRITE = 0.5;
 /** The shown pose: this high above the page (meters), this close to the reader, this large. */
-const RAISE = 0.12;
-const TOWARD = 0.03;
-const SHOWN_SCALE = 1.8;
+const RAISE = 0.24;
+const TOWARD = -0.12;
+const SHOWN_SCALE = 4.2;
 /** How far a shown photo leans up toward the reader (radians). */
-const LEAN = 0.8;
+const LEAN = 1.38;
 /** Each photo gets this long in the slow camera move (seconds). */
 const HOLD = 7;
 /** How far the camera move zooms in at its closest. */
