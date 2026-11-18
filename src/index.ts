@@ -1,5 +1,6 @@
-import '@fontsource/atkinson-hyperlegible/latin-400.css';
-import '@fontsource/atkinson-hyperlegible/latin-700.css';
+import '@fontsource/atkinson-hyperlegible-next/latin-400.css';
+import '@fontsource/atkinson-hyperlegible-next/latin-600.css';
+import '@fontsource/atkinson-hyperlegible-next/latin-700.css';
 import './start/start-page.css';
 
 import { Color, type Material, type Mesh, World } from '@iwsdk/core';
@@ -27,7 +28,7 @@ import { loadPage, restorePage, savePage, turnedCount } from './state/progress.j
 import { type Gift, readGift } from './story/personalize.js';
 
 // A warm, dim room color, so the space around the book is never black.
-const ROOM_COLOR = '#3a2418';
+const ROOM_COLOR = '#211f1d';
 // Quest blurs the edges of the view to save power (foveation). Text is the
 // heart of the book, so we ask for a gentler level than the maximum.
 const FOVEATION = 0.5;

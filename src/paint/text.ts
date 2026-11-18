@@ -1,11 +1,12 @@
-// Text is drawn on canvas textures in Atkinson Hyperlegible,
+// Text is drawn on canvas textures in Atkinson Hyperlegible Next,
 // only after the browser has the font, so it never falls back to another font.
 
-export const FONT_FAMILY = '"Atkinson Hyperlegible"';
+export const FONT_FAMILY = '"Atkinson Hyperlegible Next"';
 
 export async function loadFonts(): Promise<void> {
   await Promise.all([
     document.fonts.load(`400 48px ${FONT_FAMILY}`),
+    document.fonts.load(`600 48px ${FONT_FAMILY}`),
     document.fonts.load(`700 48px ${FONT_FAMILY}`),
   ]);
 }
