@@ -46,3 +46,6 @@ pids/
 .cursor/mcp.json
 .vscode/mcp.json
 .codex/config.toml
+
+# Vite dev cache
+.vite/
