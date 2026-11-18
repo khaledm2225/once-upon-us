@@ -13,6 +13,8 @@ interface Row {
   thumb: string;
   month: number | null;
   year: number | null;
+  /** The demo album file this row came from, for sample photos. */
+  sample?: string;
 }
 
 const FIRST_YEAR = 1850;
@@ -160,13 +162,15 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
     let failed = 0;
     for (const photo of demoAlbum) {
       if (rows.length >= ALBUM_SIZE) break;
+      // Trying again only fills in the sample photos that are still missing.
+      if (rows.some((row) => row.sample === photo.src)) continue;
       try {
         const response = await fetch(photo.src);
         if (!response.ok) throw new Error(`The sample photo answered ${response.status}.`);
         const blob = await response.blob();
         const file = new File([blob], photo.src.slice(photo.src.lastIndexOf('/') + 1), { type: 'image/jpeg' });
         const { month, year } = readDateLabel(photo.date);
-        rows.push({ file, thumb: URL.createObjectURL(file), month, year });
+        rows.push({ file, thumb: URL.createObjectURL(file), month, year, sample: photo.src });
         added++;
       } catch (error) {
         console.warn(error);
@@ -176,6 +180,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
     adding = false;
     changed();
     render();
+    if (!saveButton.hidden) saveButton.focus();
     if (failed > 0) say('Some sample photos could not be loaded. Please try again.');
     else
       say(

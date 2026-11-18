@@ -9,7 +9,7 @@
 
 - The 10 photos in the demo album (`public/album/`) are AI-generated images, made with ChatGPT for this demo.
 - They show Grace and Henry, a fictional couple. They are not real people.
-- A family's own gift never shows these photos: it shows only the photos that family saves.
+- A family's gift shows only the photos that family saves. On the start page, Use sample photos can add these demo photos to a gift, and the page says they are AI generated.
 
 ## Font
 
