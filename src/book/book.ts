@@ -28,8 +28,10 @@ import {
 import { coverNamesLine, story } from '../story/story.js';
 import { CornerHandle, Leaf, LeafState, TurnTab } from './book-components.js';
 
-/** The cover plus 5 sheets. */
-export const LEAF_COUNT = 6;
+/** The cover, 5 story sheets and 2 photo album sheets. */
+export const LEAF_COUNT = 8;
+/** From this leaf on, both faces of a sheet are album pages. */
+export const FIRST_ALBUM_LEAF = 6;
 /** Tiny angle between stacked leaves, so pages never flicker against each other. */
 const REST_STEP = 0.004;
 
@@ -157,10 +159,19 @@ export function buildBook(world: World): Book {
   leafGeo.addGroup(0, 18, 0);
   leafGeo.addGroup(18, 6, 1);
   leafGeo.addGroup(24, 12, 0);
+  // Album sheets print on both faces, so their front face (indices 12 to 17)
+  // gets its own material too: material 2.
+  const albumLeafGeo = leafGeo.clone();
+  albumLeafGeo.clearGroups();
+  albumLeafGeo.addGroup(0, 12, 0);
+  albumLeafGeo.addGroup(12, 6, 2);
+  albumLeafGeo.addGroup(18, 6, 1);
+  albumLeafGeo.addGroup(24, 12, 0);
   const coverGeo = new BoxGeometry(W + over, coverT, D + 2 * over);
   coverGeo.translate((W + over) / 2, coverT / 2, 0);
   // Box faces in order: +x, -x, +y (front), -y (back), +z, -z.
   const leafMats = [paperMat, paperMat];
+  const albumLeafMats = [paperMat, paperMat, paperMat];
   void edgeMat;
   const coverMats = [clothMat, clothMat, coverOutsideMat, paperMat, clothMat, clothMat];
 
@@ -170,7 +181,11 @@ export function buildBook(world: World): Book {
     const pivot = new Group();
     pivot.name = index === 0 ? 'cover' : `leaf-${index}`;
     // Each leaf gets its own list, so its two faces can print different pages.
-    const mesh = new Mesh(index === 0 ? coverGeo : leafGeo, index === 0 ? [...coverMats] : [...leafMats]);
+    const album = index >= FIRST_ALBUM_LEAF;
+    const mesh = new Mesh(
+      index === 0 ? coverGeo : album ? albumLeafGeo : leafGeo,
+      index === 0 ? [...coverMats] : album ? [...albumLeafMats] : [...leafMats],
+    );
     leafMeshes.push(mesh);
     pivot.add(mesh);
     const rest = restRightAngle(index);
@@ -195,16 +210,37 @@ export function buildBook(world: World): Book {
   // Page corner boxes reach a little past the near edge, toward the hand,
   // which keeps them well apart from the paper tabs.
   const handleGeo = new BoxGeometry(0.12, 0.12, 0.08);
-  // The cover opens from anywhere along its outer edge, like a real book.
-  const coverEdgeGeo = new BoxGeometry(0.1, 0.12, D + 0.02);
-  leaves.forEach((leafEntity, index) => {
-    const handle = new Mesh(index === 0 ? coverEdgeGeo : handleGeo, handleMat);
-    handle.name = index === 0 ? 'cover-corner' : `leaf-${index}-corner`;
-    if (index === 0) handle.position.set(W - 0.03, 0, 0);
-    else handle.position.set(W - 0.02, 0, D / 2 + 0.01);
+  // The cover opens from almost anywhere along its outer edge, like a real
+  // book: one grab zone on the far side and one on the near side. The band
+  // beside the forward tab stays free (3 cm each way), so a fingertip there
+  // pokes the tab and a pinch elsewhere on the edge holds the cover.
+  const tabFar = TAB_Z - TAB_SIZE.z / 2 - 0.03;
+  const tabNear = TAB_Z + TAB_SIZE.z / 2 + 0.03;
+  const edgeFar = -D / 2 - 0.01;
+  const edgeNear = D / 2 + 0.01;
+  const coverZones = [
+    { name: 'cover-edge-far', from: edgeFar, to: tabFar },
+    { name: 'cover-corner', from: tabNear, to: edgeNear },
+  ];
+  const addHandle = (leafEntity: Entity, handle: Mesh) => {
     const handleEntity = world.createTransformEntity(handle, { parent: leafEntity });
     handleEntity.addComponent(CornerHandle, { leaf: leafEntity });
     handleEntity.addComponent(OneHandGrabbable, { rotate: false, translate: false });
+  };
+  leaves.forEach((leafEntity, index) => {
+    if (index === 0) {
+      for (const zone of coverZones) {
+        const handle = new Mesh(new BoxGeometry(0.1, 0.12, zone.to - zone.from), handleMat);
+        handle.name = zone.name;
+        handle.position.set(W - 0.03, 0, (zone.from + zone.to) / 2);
+        addHandle(leafEntity, handle);
+      }
+      return;
+    }
+    const handle = new Mesh(handleGeo, handleMat);
+    handle.name = `leaf-${index}-corner`;
+    handle.position.set(W - 0.02, 0, D / 2 + 0.01);
+    addHandle(leafEntity, handle);
   });
 
   // Large paper tabs for a poke: forward on the right edge, back on the left.

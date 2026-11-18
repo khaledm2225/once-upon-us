@@ -23,9 +23,23 @@
           </fieldset>
           <label for="dedication">Dedication</label>
           <textarea id="dedication" name="dedication" rows="4" maxlength="240"></textarea>
+          <fieldset class="photos">
+            <legend>Family photos</legend>
+            <p class="field-hint">Up to 10 photos, each with its date. They fill a photo album at the end of the book.</p>
+            <ul id="photo-list" class="photo-list"></ul>
+            <div class="photo-actions">
+              <button id="add-photos" type="button" class="secondary">Add photos</button>
+              <button id="save-photos" type="button" class="secondary" hidden>Save photos</button>
+            </div>
+            <input id="photo-input" type="file" accept="image/*" multiple hidden />
+            <p id="photo-status" class="field-hint status" role="status" aria-live="polite" hidden></p>
+            <p class="field-hint">Saved photos are kept online so the book can show them. Anyone with the gift link can see them.</p>
+          </fieldset>
         </form>
-        <button id="enter-vr" type="button" disabled>Enter VR</button>
-        <p id="start-note">Preparing the book…</p>
+        <div class="start-actions">
+          <button id="enter-vr" type="button" disabled>Enter VR</button>
+          <p id="start-note">Preparing the book…</p>
+        </div>
       </div>
     </main>
     <script type="module" src="/src/index.ts"></script>

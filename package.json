@@ -10,7 +10,7 @@
     "dev:status": "iwsdk dev status",
     "reference:status": "iwsdk reference status",
     "reference:warmup": "iwsdk reference warmup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -23,6 +23,7 @@
     "three": "npm:super-three@0.185.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261118.1",
     "@iwsdk/cli": "1.1.0",
     "@iwsdk/reference": "1.1.0",
     "@iwsdk/vite-plugin-dev": "1.1.0",

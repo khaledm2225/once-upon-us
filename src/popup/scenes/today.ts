@@ -13,7 +13,7 @@ function buildSun(): Mesh {
   const sun = new Path2D();
   sun.arc(64, 64, 58, 0, Math.PI * 2);
   paperShape(ctx, sun, '#e3632b', { edge: 'rgba(120, 40, 10, 0.35)' });
-  const material = new MeshLambertMaterial({ map: toTexture(canvas), alphaTest: 0.5, emissive: '#b8461c', emissiveIntensity: 0.35 });
+  const material = new MeshLambertMaterial({ map: toTexture(canvas), alphaTest: 0.5, alphaToCoverage: true, emissive: '#b8461c', emissiveIntensity: 0.35 });
   const mesh = new Mesh(new PlaneGeometry(0.034, 0.034), material);
   mesh.name = 'sun';
   return mesh;

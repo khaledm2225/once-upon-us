@@ -1,5 +1,7 @@
 import {
   type CanvasTexture,
+  type Entity,
+  Group,
   Mesh,
   MeshLambertMaterial,
   PlaneGeometry,
@@ -7,17 +9,23 @@ import {
 } from '@iwsdk/core';
 
 import { LAYOUT } from '../layout.js';
-import { FONT_FAMILY, setFont } from '../paint/text.js';
+import { setFont } from '../paint/text.js';
 import { COLORS, makeCanvas, paintPaper, toTexture } from '../paint/textures.js';
 import { story } from '../story/story.js';
+import { TextLine } from './text-components.js';
 import type { Book } from './book.js';
 
 // The printed words: each story page's text in the lower band of the left
 // page under its scene, and the dedication on the last page.
-// All text is Atkinson Hyperlegible, drawn after the font has loaded.
+// All text is Atkinson Hyperlegible Next, drawn after the font has loaded.
+//
+// Each line is printed on its own see-through strip lying on the page, so the
+// lines can appear one by one like film titles (TextRevealSystem).
 
-const PAGE_PX = { w: 768, h: 960 } as const;
+export const PAGE_PX = { w: 768, h: 960 } as const;
 const MARGIN = 64;
+/** Lines float this far off the paper, so they never flicker into it. */
+const LIFT = 0.0003;
 
 export interface TextStyle {
   /** Font size in canvas pixels for story text. */
@@ -28,9 +36,9 @@ export interface TextStyle {
 
 export const NORMAL_TEXT: TextStyle = { size: 46, ink: COLORS.ink, paper: COLORS.paper };
 
-/** One shared paper grain, painted once and copied under every page's text. */
+/** One shared paper grain, painted once and used by every printed page. */
 let grainCanvas: HTMLCanvasElement | null = null;
-function paperBase(paper: string): HTMLCanvasElement {
+export function paperBase(paper: string): HTMLCanvasElement {
   if (!grainCanvas || grainCanvas.dataset.paper !== paper) {
     const [canvas, ctx] = makeCanvas(PAGE_PX.w, PAGE_PX.h);
     paintPaper(ctx, PAGE_PX.w, PAGE_PX.h, paper, 13);
@@ -58,51 +66,102 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   return lines;
 }
 
-/** Paints story lines in the lower band of a page, centered. */
-export function paintStoryPage(texture: CanvasTexture, paragraphs: readonly string[], style: TextStyle): void {
-  const canvas = texture.image as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-  ctx.drawImage(paperBase(style.paper), 0, 0);
+/**
+ * Wraps a sentence into as few lines as fit, then evens them out, so a
+ * sentence never ends on one lonely word.
+ */
+function balancedWrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const count = wrap(ctx, text, maxWidth).length;
+  if (count < 2) return [text];
+  let low = 0;
+  let high = maxWidth;
+  while (high - low > 2) {
+    const mid = (low + high) / 2;
+    if (wrap(ctx, text, mid).length > count) low = mid;
+    else high = mid;
+  }
+  return wrap(ctx, text, high);
+}
+
+/** A printed line on its page: its words and its baseline in page pixels. */
+interface PlacedLine {
+  text: string;
+  baseline: number;
+}
+
+/** Story text: each sentence balanced, set in the lower band of the page. */
+function layoutStory(ctx: CanvasRenderingContext2D, paragraphs: readonly string[], style: TextStyle): PlacedLine[] {
   setFont(ctx, style.size, 400);
-  const lines = paragraphs.flatMap((p) => wrap(ctx, p, PAGE_PX.w - MARGIN * 2));
+  const lines = paragraphs.flatMap((p) => balancedWrap(ctx, p, PAGE_PX.w - MARGIN * 2));
   const lineHeight = style.size * 1.42;
   const bottom = PAGE_PX.h - MARGIN * 1.1;
   const top = bottom - lineHeight * (lines.length - 1);
-  ctx.fillStyle = style.ink;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  lines.forEach((line, i) => ctx.fillText(line, PAGE_PX.w / 2, top + i * lineHeight));
-  texture.needsUpdate = true;
+  return lines.map((text, i) => ({ text, baseline: top + i * lineHeight }));
 }
 
-/** Paints the dedication, centered on the page. */
-export function paintDedicationPage(texture: CanvasTexture, paragraphs: readonly string[], style: TextStyle): void {
-  const canvas = texture.image as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-  ctx.drawImage(paperBase(style.paper), 0, 0);
-  const size = Math.round(style.size * 1.1);
-  setFont(ctx, size, 400);
-  ctx.font = `400 ${size}px ${FONT_FAMILY}`;
-  const groups = paragraphs.map((p) => wrap(ctx, p, PAGE_PX.w - MARGIN * 2));
+/**
+ * The dedication, centered on the page. A long one steps down in size until
+ * it fits inside the margins, never smaller than the story text.
+ */
+function layoutDedication(
+  ctx: CanvasRenderingContext2D,
+  paragraphs: readonly string[],
+  style: TextStyle,
+): { size: number; lines: PlacedLine[] } {
+  let size = Math.round(style.size * 1.1);
+  let groups: string[][] = [];
+  let total = 0;
+  const measure = () => {
+    setFont(ctx, size, 400);
+    groups = paragraphs.map((p) => balancedWrap(ctx, p, PAGE_PX.w - MARGIN * 2));
+    total = groups.reduce((sum, g) => sum + g.length * size * 1.42, 0) + size * 0.7 * (groups.length - 1);
+  };
+  measure();
+  while (total > PAGE_PX.h - MARGIN * 2 && size > style.size) {
+    size -= 2;
+    measure();
+  }
   const lineHeight = size * 1.42;
   const gap = size * 0.7;
-  const total = groups.reduce((sum, g) => sum + g.length * lineHeight, 0) + gap * (groups.length - 1);
   let y = (PAGE_PX.h - total) / 2 + size;
-  ctx.fillStyle = style.ink;
-  ctx.textAlign = 'center';
+  const lines: PlacedLine[] = [];
   for (const group of groups) {
-    for (const line of group) {
-      ctx.fillText(line, PAGE_PX.w / 2, y);
+    for (const text of group) {
+      lines.push({ text, baseline: y });
       y += lineHeight;
     }
     y += gap;
   }
-  texture.needsUpdate = true;
+  return { size, lines };
 }
 
+/** Where a page lies: which object it sits on, its size, and which face. */
+interface PageFace {
+  parent: Entity;
+  width: number;
+  depth: number;
+  /** The paper surface height in the parent's frame. */
+  surfaceY: number;
+  back: boolean;
+}
+
+/** One printed line, ready to fade in. */
+export interface LineSlot {
+  /** 0 to 4: story pages; 5: the dedication. */
+  page: number;
+  order: number;
+  group: Group;
+  material: MeshLambertMaterial;
+  restZ: number;
+  back: boolean;
+  entity: Entity;
+}
+
+export const DEDICATION_PAGE = 5;
+
 export interface BookText {
-  storyTextures: CanvasTexture[];
-  dedicationTexture: CanvasTexture;
+  lines: LineSlot[];
+  setDedication(paragraphs: readonly string[]): void;
 }
 
 /**
@@ -111,31 +170,86 @@ export interface BookText {
  * dedication lies on the inside of the back cover, the last page.
  */
 export function printBookText(world: World, book: Book, style: TextStyle = NORMAL_TEXT): BookText {
-  const storyTextures = story.pages.map((page, i) => {
-    const [canvas] = makeCanvas(PAGE_PX.w, PAGE_PX.h);
-    const texture = toTexture(canvas);
-    // The back face is seen after the page turns, so the print is rotated half a turn.
-    texture.center.set(0.5, 0.5);
-    texture.rotation = Math.PI;
-    paintStoryPage(texture, page.text, style);
-    const mesh = book.leafMeshes[i];
-    const materials = mesh.material as MeshLambertMaterial[];
-    // The cover keeps six faces (its back face is material 3); paper leaves use two (back is 1).
-    materials[i === 0 ? 3 : 1] = new MeshLambertMaterial({ map: texture });
-    return texture;
+  const [, measureCtx] = makeCanvas(8, 8);
+  const lines: LineSlot[] = [];
+
+  const addLines = (page: number, face: PageFace, placed: PlacedLine[], size: number) => {
+    const height = Math.round(size * 1.6);
+    const baselineInStrip = Math.round(size * 1.15);
+    placed.forEach((line, order) => {
+      const [canvas, ctx] = makeCanvas(PAGE_PX.w, height);
+      setFont(ctx, size, 400);
+      ctx.fillStyle = style.ink;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(line.text, PAGE_PX.w / 2, baselineInStrip);
+      const texture: CanvasTexture = toTexture(canvas);
+      // Upload now, so a page's words never stutter in when it opens.
+      world.renderer.initTexture(texture);
+      const material = new MeshLambertMaterial({ map: texture, transparent: true, depthWrite: false, opacity: 0 });
+      const strip = new Mesh(new PlaneGeometry(1, 1), material);
+      strip.scale.set(face.width, (height / PAGE_PX.h) * face.depth, 1);
+
+      const group = new Group();
+      group.name = `text-${page}-${order}`;
+      group.add(strip);
+      // Same placement as album prints: front faces look up, back faces are
+      // read after their sheet turns half around the spine.
+      if (face.back) group.rotation.set(Math.PI / 2, 0, Math.PI);
+      else group.rotation.set(-Math.PI / 2, 0, 0);
+      const centerPx = line.baseline - baselineInStrip + height / 2;
+      const restZ = -face.depth / 2 + (centerPx / PAGE_PX.h) * face.depth;
+      group.position.set(face.width / 2, face.back ? face.surfaceY - LIFT : face.surfaceY + LIFT, restZ);
+      group.visible = false;
+      const entity = world.createTransformEntity(group, { parent: face.parent });
+      entity.addComponent(TextLine, { page });
+      lines.push({ page, order, group, material, restZ, back: face.back, entity });
+    });
+  };
+
+  // Story pages: the back face of leaf 0 (the cover) to leaf 4.
+  const coverWidth = LAYOUT.page.width + LAYOUT.cover.overhang;
+  const coverDepth = LAYOUT.page.depth + 2 * LAYOUT.cover.overhang;
+  story.pages.forEach((page, i) => {
+    const face: PageFace = {
+      parent: book.leaves[i],
+      width: i === 0 ? coverWidth : LAYOUT.page.width,
+      depth: i === 0 ? coverDepth : LAYOUT.page.depth,
+      surfaceY: 0,
+      back: true,
+    };
+    addLines(i, face, layoutStory(measureCtx, page.text, style), style.size);
   });
 
-  const [canvas] = makeCanvas(PAGE_PX.w, PAGE_PX.h);
-  const dedicationTexture = toTexture(canvas);
-  paintDedicationPage(dedicationTexture, story.dedication, style);
-  const page = new Mesh(
+  // The dedication page: plain paper on the inside of the back cover.
+  const paper = new Mesh(
     new PlaneGeometry(LAYOUT.page.width, LAYOUT.page.depth),
-    new MeshLambertMaterial({ map: dedicationTexture }),
+    new MeshLambertMaterial({ map: toTexture(paperBase(style.paper)) }),
   );
-  page.name = 'dedication-page';
-  page.rotation.x = -Math.PI / 2;
-  page.position.set(LAYOUT.page.width / 2, 0.0003, 0);
-  world.createTransformEntity(page, { parent: book.entity });
+  paper.name = 'dedication-page';
+  paper.rotation.x = -Math.PI / 2;
+  paper.position.set(LAYOUT.page.width / 2, 0.0003, 0);
+  world.createTransformEntity(paper, { parent: book.entity });
+  const dedicationFace: PageFace = {
+    parent: book.entity,
+    width: LAYOUT.page.width,
+    depth: LAYOUT.page.depth,
+    surfaceY: 0.0003,
+    back: false,
+  };
 
-  return { storyTextures, dedicationTexture };
+  const setDedication = (paragraphs: readonly string[]) => {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      if (line.page !== DEDICATION_PAGE) continue;
+      line.material.map?.dispose();
+      line.entity.dispose();
+      lines.splice(i, 1);
+    }
+    const { size, lines: placed } = layoutDedication(measureCtx, paragraphs, style);
+    addLines(DEDICATION_PAGE, dedicationFace, placed, size);
+  };
+  setDedication(story.dedication);
+
+  return { lines, setDedication };
 }

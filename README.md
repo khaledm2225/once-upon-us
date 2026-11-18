@@ -2,9 +2,9 @@
 
 A pop-up book in virtual reality that tells the love story of an elderly couple.
 
-Grandchildren make it as a gift: they type their grandparents' names and a dedication, and send the link. The grandparents sit at a table in VR, open the book with their own hands, and turn the pages. On every page a paper scene unfolds and stands up, like a real pop-up book.
+Grandchildren make it as a gift: they type their grandparents' names and a dedication, add up to 10 family photos with their dates, and send the link. The grandparents sit at a table in VR, open the book with their own hands, and turn the pages. On every page a paper scene unfolds and stands up, like a real pop-up book, and the words appear line by line. After the story, a photo album shows the family photos, set down one by one with a slow film-like camera move.
 
-The demo couple, Grace and Henry, is fictional.
+The demo couple, Grace and Henry, is fictional. The demo album photos are AI-generated images of these fictional people.
 
 Built for the Meta VR Start Developer Competition 2026, Entertainment track, with Meta's Immersive Web SDK (IWSDK) and TypeScript.
 
@@ -32,6 +32,22 @@ npm run dev
 
 Click **Enter VR** on the start page to enter the book.
 
+To try saving family photos on your computer, also run the photo server. It keeps its test database in the local `.wrangler` folder:
+
+```bash
+npx wrangler d1 execute once-upon-us-photos --local --file=server/schema.sql
+```
+
+```bash
+npm run build
+```
+
+```bash
+npx wrangler pages dev --port 8788
+```
+
+The dev server sends every `/api` request to it.
+
 ## Build it
 
 ```bash
@@ -42,7 +58,7 @@ The finished site goes into the `dist` folder.
 
 ## Deploy it
 
-The site is hosted on Cloudflare Pages, free plan, static files only. Log in once (the login is stored in the macOS keychain, never in this project):
+The site is hosted on Cloudflare Pages, free plan. Family photos use Pages Functions (the `functions` folder) and one Cloudflare D1 database (`server/schema.sql`), both on the free plan, which stops at its daily limits and never bills. The database is connected by name in `wrangler.toml`; there are no secret keys in this project. Log in once (the login is stored in the macOS keychain, never in this project):
 
 ```bash
 npx wrangler login --use-keyring
@@ -58,6 +74,19 @@ npm run build
 npx wrangler pages deploy dist --project-name once-upon-us --branch main
 ```
 
+Before the first deploy, create the database tables once:
+
+```bash
+npx wrangler d1 execute once-upon-us-photos --remote --file=server/schema.sql
+```
+
+## Family photos and privacy
+
+- Photos are shrunk in the browser before they leave the device, to at most 1024 pixels.
+- They are saved only when the family presses **Save photos**.
+- A saved set gets a long random id that only the gift link carries. Anyone with the link can see the photos.
+- Photos can be added to a set only in the first 30 minutes, and a saved photo never changes.
+
 ## Credits
 
-All visuals are made in code. Third party files and their licenses are listed in `CREDITS.md`.
+All visuals are made in code, except the demo album photos, which are AI-generated. Third party files and their licenses are listed in `CREDITS.md`.

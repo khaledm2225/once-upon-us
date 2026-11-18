@@ -16,6 +16,8 @@ export const Leaf = createComponent('Leaf', {
   state: { type: Types.Int8, default: LeafState.Rest },
   restRight: { type: Types.Float32, default: 0 },
   restLeft: { type: Types.Float32, default: Math.PI },
+  /** An album sheet with no photos is put away: unseen and never turned. */
+  hidden: { type: Types.Boolean, default: false },
 });
 
 /** The invisible grab box at a leaf's free corner. */

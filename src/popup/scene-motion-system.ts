@@ -6,7 +6,10 @@ import { MotionKind, SceneMotion } from './popup-components.js';
 // Small, gentle motion inside each scene: slow, low contrast, never flashing.
 // Motion runs only while its spread is mostly open.
 
-const OPEN_ENOUGH = Math.PI * 0.6;
+const OPEN_ENOUGH = Math.PI * 0.5;
+/** Sway and steam grow from nothing to full between these openings. */
+const FADE_FROM = Math.PI * 0.5;
+const FADE_TO = Math.PI * 0.7;
 /** Rain falls slowly: texture lengths per second. */
 const RAIN_SPEED = 0.35;
 /** String lights sway a few degrees, once every few seconds. */
@@ -51,6 +54,9 @@ export class SceneMotionSystem extends createSystem({
         continue;
       }
       if (opening < OPEN_ENOUGH) continue;
+      // Sway and steam fade in and out with the page, never jumping.
+      const fadeT = Math.min(1, Math.max(0, (opening - FADE_FROM) / (FADE_TO - FADE_FROM)));
+      const fade = fadeT * fadeT * (3 - 2 * fadeT);
 
       switch (kind) {
         case MotionKind.Rain: {
@@ -61,7 +67,7 @@ export class SceneMotionSystem extends createSystem({
         }
         case MotionKind.Sway: {
           // PopUpSystem has just set the hinge; add a slow sway on top.
-          object.rotation.x += Math.sin(time * SWAY_RATE + seed) * SWAY_ANGLE;
+          object.rotation.x += Math.sin(time * SWAY_RATE + seed) * SWAY_ANGLE * fade;
           break;
         }
         case MotionKind.Window: {
@@ -76,7 +82,8 @@ export class SceneMotionSystem extends createSystem({
             const t = (time * 0.22 + i / object.children.length + seed) % 1;
             wisp.position.y = t * 0.018;
             const material = (wisp as Mesh).material as Material & { opacity: number };
-            material.opacity = Math.sin(t * Math.PI) * 0.55;
+            material.opacity = Math.sin(t * Math.PI) * 0.55 * fade;
+            wisp.visible = material.opacity > 0.02;
           });
           break;
         }

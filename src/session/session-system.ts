@@ -15,9 +15,11 @@ export class SessionSystem extends createSystem({
       const session = event.target as XRSession;
       if (session.visibilityState !== 'visible') this.releaseAll();
     };
+    // three hands over the session before IWSDK stores it, so ask three.
     this.renderer.xr.addEventListener('sessionstart', () => {
-      this.world.session?.addEventListener('visibilitychange', onVisibility);
+      this.renderer.xr.getSession()?.addEventListener('visibilitychange', onVisibility);
     });
+    this.renderer.xr.addEventListener('sessionend', () => this.releaseAll());
   }
 
   releaseAll(): void {

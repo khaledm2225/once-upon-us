@@ -1,0 +1,11 @@
+# Cloudflare Pages settings for Once Upon Us (free plan only).
+# The site is the built "dist" folder. The family photos API in "functions"
+# uses one D1 database, bound by name. The database id is not a secret.
+name = "once-upon-us"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "once-upon-us-photos"
+database_id = "5195446c-1241-4c63-ad91-fb55c6a8dd38"

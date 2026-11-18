@@ -21,6 +21,11 @@ export const COLORS = {
 
 let maxAnisotropy = 1;
 
+/** The GPU's best angled filtering level, for textures made outside toTexture. */
+export function bestAnisotropy(): number {
+  return maxAnisotropy;
+}
+
 /** Call once after the renderer exists, so text stays sharp at a slant. */
 export function setTextureQuality(renderer: WebGLRenderer): void {
   maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
