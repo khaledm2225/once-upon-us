@@ -4,22 +4,35 @@ import { AlbumPrint } from './album-components.js';
 import type { Album, PrintSlot } from './album-pages.js';
 import { Leaf } from './book-components.js';
 import { isBusy, topLeftLeaf, topRightLeaf } from './book-state.js';
+import { playMemory } from '../sound/paper-sound.js';
 
-// The album moves like a film. When an album spread opens and the pages are
-// still, its prints are set down one by one: each fades in while it settles
-// from just above the paper. Then a slow camera move drifts into one photo,
-// eases back out, and moves on to the next photo, again and again.
-// Everything is slow and small, and the book itself never moves, so it stays
+// The album moves like a film of memories. When an album spread opens and
+// the pages are still, its photos come one at a time: a photo rises above the
+// spine, larger and leaning toward the reader, with its date printed under it.
+// It rests there for a moment, then glides down to its place on the page,
+// while the next photo rises. Once the pages are full, a slow camera move
+// drifts into one photo, eases back out, and moves on to the next.
+// The book itself never moves, and every motion is slow, so it stays
 // comfortable in VR.
 
-/** First print starts after this many seconds; each next one this much later. */
-const FIRST_DELAY = 0.35;
-const STAGGER = 0.5;
-/** How long one print takes to settle (seconds). */
-const SETTLE = 1.0;
-/** How high above the paper a print starts (meters), and how much larger. */
-const DROP = 0.012;
-const GROW = 0.04;
+/** The first photo rises after this many seconds; each next one this much later. */
+const FIRST_DELAY = 0.4;
+const STEP = 4.2;
+/** Seconds to fade in, to rest in front of the reader, and to glide down. */
+const APPEAR = 0.8;
+const SHOW = 2.4;
+const GLIDE = 1.6;
+/** Once a photo is in front, its date writes itself across it, left to right. */
+const WRITE_DELAY = 0.15;
+const WRITE = 1.1;
+/** The written date fades out over this long as the photo starts down. */
+const UNWRITE = 0.5;
+/** The shown pose: this high above the page (meters), this close to the reader, this large. */
+const RAISE = 0.12;
+const TOWARD = 0.03;
+const SHOWN_SCALE = 1.8;
+/** How far a shown photo leans up toward the reader (radians). */
+const LEAN = 0.8;
 /** Each photo gets this long in the slow camera move (seconds). */
 const HOLD = 7;
 /** How far the camera move zooms in at its closest. */
@@ -33,12 +46,16 @@ export function setAlbum(next: Album): void {
 }
 
 const easeOut = (p: number) => 1 - (1 - p) ** 3;
+const easeInOut = (p: number) => (p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2);
+const clamp01 = (p: number) => Math.min(1, Math.max(0, p));
 
 export class AlbumSystem extends createSystem({
   prints: { required: [AlbumPrint] },
   leaves: { required: [Leaf] },
 }) {
   private readonly shown: PrintSlot[] = [];
+  /** Prints whose rise has already played its sound on this spread. */
+  private readonly sounded = new Set<PrintSlot>();
   private spreadKey = -1;
   private clock = 0;
 
@@ -64,6 +81,7 @@ export class AlbumSystem extends createSystem({
       if (busy) return this.holdMoving(leftIndex, rightIndex);
       this.spreadKey = key;
       this.clock = 0;
+      this.sounded.clear();
     }
     this.clock += Math.min(delta, 0.05);
 
@@ -82,21 +100,23 @@ export class AlbumSystem extends createSystem({
     }
     if (this.shown.length === 0) return;
 
-    const filmStart = FIRST_DELAY + STAGGER * (this.shown.length - 1) + SETTLE;
+    const filmStart = FIRST_DELAY + STEP * (this.shown.length - 1) + APPEAR + SHOW + GLIDE;
+    // A page turning while a photo is in the air would cut through it, so
+    // every photo lands on its page as soon as a turn starts.
+    if (busy) this.clock = Math.max(this.clock, filmStart);
     const film = this.clock - filmStart;
     const focus = film > 0 ? Math.floor(film / HOLD) % this.shown.length : -1;
     const u = film > 0 ? (film % HOLD) / HOLD : 0;
 
     for (let order = 0; order < this.shown.length; order++) {
       const slot = this.shown[order];
-      const p = Math.min(1, Math.max(0, (this.clock - FIRST_DELAY - STAGGER * order) / SETTLE));
-      const e = easeOut(p);
-      // A print draws only once its own fade has begun.
-      slot.group.visible = e > 0;
-      slot.photoMaterial.opacity = e;
-      slot.frameMaterial.opacity = e;
-      slot.group.position.y = slot.restY + (slot.back ? -1 : 1) * DROP * (1 - e);
-      slot.group.scale.setScalar(1 + GROW * (1 - e));
+      const t = this.clock - FIRST_DELAY - STEP * order;
+      // Each photo's rise has its own warm note; a turn skips the rest.
+      if (t >= 0 && !this.sounded.has(slot)) {
+        this.sounded.add(slot);
+        if (!busy && t < APPEAR) playMemory(order);
+      }
+      this.pose(slot, t);
 
       // In, then out, with no sudden start or stop: sin² over the photo's turn.
       const zoom = order === focus ? 1 + ZOOM * Math.sin(Math.PI * u) ** 2 : 1;
@@ -107,6 +127,40 @@ export class AlbumSystem extends createSystem({
         map.offset.set((1 - size) * slot.anchor.x, (1 - size) * slot.anchor.y);
       }
     }
+  }
+
+  /**
+   * Places one print along its path, t seconds after its turn began: it fades
+   * in above the spine, rests there facing the reader, then glides down to
+   * its place on the page. Page coordinates: x runs out from the spine, z
+   * toward the reader, and y along the face normal (down on a back face).
+   */
+  private pose(slot: PrintSlot, t: number): void {
+    const appear = easeOut(clamp01(t / APPEAR));
+    // 1 while shown in front of the reader, 0 once down on the page.
+    const up = 1 - easeInOut(clamp01((t - APPEAR - SHOW) / GLIDE));
+    const side = slot.back ? -1 : 1;
+    const g = slot.group;
+    g.visible = appear > 0;
+    slot.photoMaterial.opacity = appear;
+    slot.frameMaterial.opacity = appear;
+    g.position.x = slot.restX * (1 - up);
+    g.position.z = slot.restZ + (TOWARD - slot.restZ) * up;
+    g.position.y = slot.restY + side * RAISE * up;
+    g.rotation.x = side * (-Math.PI / 2 + LEAN * up);
+    g.scale.setScalar(1 + (SHOWN_SCALE - 1) * up * (0.9 + 0.1 * appear));
+
+    // The date writes itself across the photo, then fades as it goes down.
+    const write = easeInOut(clamp01((t - APPEAR - WRITE_DELAY) / WRITE));
+    const keep = 1 - clamp01((t - APPEAR - SHOW) / UNWRITE);
+    const title = slot.title;
+    title.visible = write > 0 && keep > 0;
+    slot.titleMaterial.opacity = Math.min(1, write * 1.5) * keep;
+    const width = slot.titleWidth * Math.max(write, 0.001);
+    title.scale.x = width;
+    title.position.x = (width - slot.titleWidth) / 2;
+    const map = slot.titleMaterial.map;
+    if (map) map.repeat.x = Math.max(write, 0.001);
   }
 
   /** While a page turns, prints already showing ride along with their page. */
@@ -121,6 +175,8 @@ export class AlbumSystem extends createSystem({
 
   private hide(slot: PrintSlot): void {
     slot.group.visible = false;
+    slot.title.visible = false;
+    slot.titleMaterial.opacity = 0;
     slot.photoMaterial.opacity = 0;
     slot.frameMaterial.opacity = 0;
   }

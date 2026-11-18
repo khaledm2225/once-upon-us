@@ -33,7 +33,7 @@ Families who want to give their grandparents a personal gift, and the grandparen
 
 ## Hands only
 
-It is seated, and no controllers are needed. Pinch a page corner and turn it like paper, or poke the large paper arrow tabs. Either hand works. On each of the 5 story spreads, a paper scene stands up as the page opens and folds flat as it closes: a rainy bus stop, a wedding, a first home, a busy dinner table and a sunset bench. The words fade in line by line. Then a photo album sets the family photos down one by one with a slow film zoom, and the dedication waits on the last page.
+It is seated and needs no controllers. Pinch a page corner and turn it like paper, or poke the large paper arrow tabs. Either hand works. On each of the 5 story spreads, a paper scene stands up as the page opens and folds flat as it closes: a rainy bus stop, a wedding, a first home, a busy dinner table and a sunset bench. Words fade in line by line. Then the album plays like a film of memories: each photo rises, its date writes itself across it, and it glides into place. The dedication waits on the last page.
 
 There is no tutorial text in VR. While the book is closed, the cover corner lifts softly and a small paper hand shows the pinch.
 
@@ -43,14 +43,14 @@ Five switches sit on the start page and as paper buttons in front of the book: L
 
 ## How I built it
 
-Meta IWSDK 1.1.0 and TypeScript. Pages turn with IWSDK's OneHandGrabbable, following the index fingertip. Tabs and buttons use PokeInteractable. The rest is 10 custom ECS systems. The room, the book, its paper art and its sounds are all made in code with canvas and Web Audio. Names and the dedication live in the link after "#". Photos are shrunk in the browser. They are saved on Cloudflare's free plan, and only when the family presses Save photos. Anyone with the gift link can see them, and they are deleted after 30 days.
+Meta IWSDK 1.1.0 and TypeScript. Pages turn with IWSDK's OneHandGrabbable, following the index fingertip. Tabs and buttons use PokeInteractable. The rest is 10 custom ECS systems. The room, the book, its paper art and sounds are made in code with canvas and Web Audio. Names and the dedication live in the link after "#". Photos are shrunk in the browser. They are saved on Cloudflare's free plan, and only when the family presses Save photos. Anyone with the gift link can see them, and they are deleted after 30 days.
 
 ## Future plans and launch date
 
 There are no future plans. Once Upon Us was made only for this competition. There is no target launch date: it is free and live now at https://once-upon-us-7yf.pages.dev.
 ```
 
-Note: 498 words (limit 500). The headings are counted.
+Note: 499 words (limit 500). The headings are counted.
 
 ## Track
 
@@ -171,7 +171,7 @@ Rules for this video:
 - The real app only. No AI generated video.
 - Hands first and clear within the first 30 seconds.
 - No brands, logos or real people. For the gift shot, use the demo album photos from `public/album/`, never real family photos.
-- Sound is the app's own paper sounds. No outside music.
+- The music and the soft shimmer on each photo were made with ElevenLabs. Everything on screen is the real app.
 
 Shots:
 
@@ -180,7 +180,7 @@ Shots:
 3. 0:30 to 0:50. Pinch the next page and hold it half open, so the wedding scene stands half way. Let go before halfway so it falls back, then turn it fully. The string lights sway.
 4. 0:50 to 1:10. Poke the right arrow tab with a fingertip. The first home opens with its glowing window and steam. Poke again for the busy dinner table.
 5. 1:10 to 1:25. The sunset bench scene. Hold on the paper sun lowering behind the hills.
-6. 1:25 to 1:45. The photo album: prints set down one by one, then the slow zoom into one photo. On screen text: "Demo photos are AI generated pictures of a fictional couple."
+6. 1:25 to 1:45. The photo album: each photo rises, its date writes itself across it, and it glides into place. On screen text: "Demo photos are AI generated pictures of a fictional couple."
 7. 1:45 to 1:58. Turn to the last page: the dedication.
 8. 1:58 to 2:20. Poke the paper buttons: Large text, then High contrast, then Large tabs. Show the book reprint each time. Show Read aloud only if the recording browser has a voice and it really speaks. If not, skip it.
 9. 2:20 to 2:45. The 2D start page: type two names and a dedication, press Use sample photos, press Save photos, and show the address bar change into the gift link. Enter VR and show the new names on the cover. Run the photo server too, as the README shows, so Save photos works on the dev server. Crop or blur the address bar: on the dev server it shows a local address, not the live link.
