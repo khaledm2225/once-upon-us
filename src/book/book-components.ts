@@ -22,3 +22,8 @@ export const Leaf = createComponent('Leaf', {
 export const CornerHandle = createComponent('CornerHandle', {
   leaf: { type: Types.Entity, default: null },
 });
+
+/** A big paper tab to poke: direction 1 turns forward, -1 turns back. */
+export const TurnTab = createComponent('TurnTab', {
+  direction: { type: Types.Int8, default: 1 },
+});
