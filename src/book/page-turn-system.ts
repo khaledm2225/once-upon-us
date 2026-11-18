@@ -43,6 +43,12 @@ interface Settle {
 /** Events other systems listen to: "lift" when a page is picked up, "land" when it settles. */
 export const bookEvents = new EventTarget();
 
+/** An extra lift on the closed cover, set by OnboardingSystem to invite a pinch. */
+let coverInvite = 0;
+export function setCoverInvite(angle: number): void {
+  coverInvite = angle;
+}
+
 function smoothstep(t: number): number {
   return t * t * (3 - 2 * t);
 }
@@ -188,7 +194,8 @@ export class PageTurnSystem extends createSystem({
       const lift = current + (wanted - current) * (1 - Math.exp(-LIFT_RATE * dt));
       this.lift.set(leaf, lift);
       const pivot = leaf.object3D;
-      if (pivot) pivot.rotation.z = angle + lift;
+      const invite = resting && (leaf.getValue(Leaf, 'index') as number) === 0 ? coverInvite : 0;
+      if (pivot) pivot.rotation.z = angle + lift + invite;
     }
 
     // One page at a time: only the top page on each side can be grabbed,

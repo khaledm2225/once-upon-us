@@ -41,6 +41,13 @@ function grain(ctx: Ctx, path: Path2D, seed: number, w: number, h: number): void
 let shapeSeed = 1;
 
 /** Fills a paper shape with color, grain and a darker cut edge. */
+/** High contrast: every paper shape gets a thick, dark outline. */
+const STRONG_EDGE = 'rgba(22, 12, 6, 0.9)';
+let strongEdges = false;
+export function setStrongEdges(on: boolean): void {
+  strongEdges = on;
+}
+
 export function paperShape(
   ctx: Ctx,
   path: Path2D,
@@ -51,8 +58,8 @@ export function paperShape(
   ctx.fillStyle = color;
   ctx.fill(path);
   grain(ctx, path, shapeSeed++, width, height);
-  ctx.strokeStyle = options.edge ?? 'rgba(40, 22, 12, 0.35)';
-  ctx.lineWidth = options.edgeWidth ?? 2;
+  ctx.strokeStyle = strongEdges ? STRONG_EDGE : (options.edge ?? 'rgba(40, 22, 12, 0.35)');
+  ctx.lineWidth = strongEdges ? Math.max(5, (options.edgeWidth ?? 2) * 2.5) : (options.edgeWidth ?? 2);
   ctx.lineJoin = 'round';
   ctx.stroke(path);
 }

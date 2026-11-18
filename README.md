@@ -6,6 +6,14 @@ Grandchildren make it as a gift: they type their grandparents' names and a dedic
 
 The demo couple, Grace and Henry, is fictional. The demo album photos are AI-generated images of these fictional people.
 
+## In VR
+
+- **Hands only, seated.** Pinch a page corner and turn it like paper, or poke the big paper arrows to turn one page at a time. Either hand works.
+- **The first minute.** The closed cover lifts softly every few seconds, and a small paper hand shows the pinch. Both stop after the first pinch.
+- **Reading settings.** Large text, high contrast (darker ink on lighter paper), large page arrows and read aloud. Change them on the start page or with the paper buttons in front of the book. They are saved on the device.
+- **Read aloud** appears only where the browser has a voice to read with.
+- **Sound.** Paper sounds are made in code with Web Audio: a lift, a turn, a soft thump when a page lands, and quiet rain on the first page. A Sound switch on the start page turns them off.
+
 Built for the Meta VR Start Developer Competition 2026, Entertainment track, with Meta's Immersive Web SDK (IWSDK) and TypeScript.
 
 Live link: https://once-upon-us-7yf.pages.dev

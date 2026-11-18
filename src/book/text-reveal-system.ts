@@ -1,5 +1,6 @@
 import { createSystem } from '@iwsdk/core';
 
+import { readPage, stopSpeaking } from '../settings/read-aloud.js';
 import { Leaf } from './book-components.js';
 import { isBusy, topLeftLeaf, topRightLeaf } from './book-state.js';
 import { type BookText, DEDICATION_PAGE, type LineSlot } from './page-text.js';
@@ -38,6 +39,7 @@ export class TextRevealSystem extends createSystem({
     this.renderer.xr.addEventListener('sessionstart', () => {
       this.openPage = -2;
     });
+    this.renderer.xr.addEventListener('sessionend', () => stopSpeaking());
   }
 
   update(delta: number): void {
@@ -59,6 +61,7 @@ export class TextRevealSystem extends createSystem({
       }
       this.openPage = page;
       this.clock = 0;
+      this.readAloud(page);
     }
     this.clock += Math.min(delta, 0.05);
 
@@ -73,6 +76,17 @@ export class TextRevealSystem extends createSystem({
       line.material.opacity = e;
       line.group.position.z = line.restZ + RISE * (1 - e);
     }
+  }
+
+  /** Reads the newly opened page's words, in order, if read aloud is on. */
+  private readAloud(page: number): void {
+    if (!text || page < 0) {
+      stopSpeaking();
+      return;
+    }
+    const words: string[] = [];
+    for (const line of text.lines) if (line.page === page) words[line.order] = line.text;
+    readPage(words.join(' '));
   }
 
   private hide(line: LineSlot): void {

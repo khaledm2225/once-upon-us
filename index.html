@@ -12,6 +12,15 @@
       <div class="start-card">
         <div class="knit" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
         <h1>Once Upon Us</h1>
+        <fieldset class="reading">
+          <legend>Reading settings</legend>
+          <label class="switch"><input type="checkbox" data-setting="largeText" /><span>Large text</span></label>
+          <label class="switch"><input type="checkbox" data-setting="highContrast" /><span>High contrast</span></label>
+          <label class="switch"><input type="checkbox" data-setting="largeTabs" /><span>Large tabs</span></label>
+          <label class="switch" id="read-aloud-switch" hidden><input type="checkbox" data-setting="readAloud" /><span>Read aloud</span></label>
+          <label class="switch"><input type="checkbox" data-setting="sound" /><span>Sound</span></label>
+          <p class="field-hint">These stay on this device. You can also change them with the paper buttons in front of the book.</p>
+        </fieldset>
         <form id="gift-form" class="gift" autocomplete="off">
           <fieldset>
             <legend>Names on the cover</legend>

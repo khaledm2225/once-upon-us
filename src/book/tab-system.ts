@@ -47,7 +47,7 @@ export class TabSystem extends createSystem({
     if (!leaf) return;
     this.armed.set(tab, false);
     startAutoTurn(leaf, forward);
-    bookEvents.dispatchEvent(new CustomEvent('lift', { detail: { leaf } }));
+    bookEvents.dispatchEvent(new CustomEvent('lift', { detail: { leaf, byTab: true } }));
   }
 
   /** Distance from the nearest index fingertip to the tab's box. */
