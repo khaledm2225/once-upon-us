@@ -1,0 +1,18 @@
+# The daily photo cleanup for Once Upon Us: a small Cloudflare Worker on the
+# free plan. Pages Functions can't run on a schedule, so this Worker does.
+# It has no web address; it only wakes once a day and deletes photo sets
+# older than 30 days from the same D1 database the site uses.
+name = "once-upon-us-cleanup"
+main = "index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = false
+preview_urls = false
+
+# Every day at 03:00 UTC (05:00 in Cairo).
+[triggers]
+crons = ["0 3 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "once-upon-us-photos"
+database_id = "5195446c-1241-4c63-ad91-fb55c6a8dd38"

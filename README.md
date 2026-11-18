@@ -88,12 +88,19 @@ Before the first deploy, create the database tables once:
 npx wrangler d1 execute once-upon-us-photos --remote --file=server/schema.sql
 ```
 
+The daily photo cleanup is a separate small Worker in `workers/cleanup` (Pages can't run on a schedule). Deploy it once, and again whenever it changes:
+
+```bash
+npx wrangler deploy --config workers/cleanup/wrangler.toml
+```
+
 ## Family photos and privacy
 
 - Photos are shrunk in the browser before they leave the device, to at most 1024 pixels.
 - They are saved only when the family presses **Save photos**.
 - A saved set gets a long random id that only the gift link carries. Anyone with the link can see the photos.
 - Photos can be added to a set only in the first 30 minutes, and a saved photo never changes.
+- Photos are kept for 30 days. After that the site stops showing them, and a small daily job deletes them from the database.
 
 ## Credits
 

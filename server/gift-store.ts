@@ -19,6 +19,24 @@ export const MAX_GIFTS_PER_DAY = 20;
  */
 export const MAX_PHOTOS_TOTAL = 900;
 
+/** Photos are kept this many days after their set is made, then deleted. */
+export const KEEP_DAYS = 30;
+export const KEEP_MS = KEEP_DAYS * 24 * 60 * 60 * 1000;
+
+/**
+ * Deletes every photo set older than KEEP_DAYS, photos first. The cleanup
+ * Worker calls this once a day; the API already hides older sets before then.
+ * Returns how many photos were deleted.
+ */
+export async function deleteOldGifts(db: D1Database, now: number): Promise<number> {
+  const before = now - KEEP_MS;
+  const [photos] = await db.batch([
+    db.prepare('DELETE FROM photos WHERE gift_id IN (SELECT id FROM gifts WHERE created_at < ?1)').bind(before),
+    db.prepare('DELETE FROM gifts WHERE created_at < ?1').bind(before),
+  ]);
+  return photos.meta.changes;
+}
+
 /**
  * Writes only from this site's own pages. Browsers mark every request with
  * Sec-Fetch-Site, so another website can't use up the daily limits.

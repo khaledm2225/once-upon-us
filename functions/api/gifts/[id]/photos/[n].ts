@@ -1,5 +1,6 @@
 import {
   type Env,
+  KEEP_MS,
   MAX_DATE_CHARS,
   MAX_JPEG_CHARS,
   MAX_PHOTOS_TOTAL,
@@ -17,15 +18,22 @@ export const onRequestGet: PagesFunction<Env, 'id' | 'n'> = async ({ env, params
   const id = param(params.id);
   const n = photoNumber(param(params.n));
   if (!isGiftId(id) || n === null) return json({ error: 'Not found.' }, 404);
-  const row = await env.DB.prepare('SELECT jpeg FROM photos WHERE gift_id = ?1 AND n = ?2')
-    .bind(id, n)
-    .first<{ jpeg: string }>();
+  const now = Date.now();
+  // A set older than KEEP_DAYS is gone, even before the daily cleanup deletes it.
+  const row = await env.DB.prepare(
+    `SELECT photos.jpeg, gifts.created_at FROM photos JOIN gifts ON gifts.id = photos.gift_id
+     WHERE photos.gift_id = ?1 AND photos.n = ?2 AND gifts.created_at > ?3`,
+  )
+    .bind(id, n, now - KEEP_MS)
+    .first<{ jpeg: string; created_at: number }>();
   if (!row) return json({ error: 'Not found.' }, 404);
-  // Family photos: only the viewer's own browser may keep a copy, for a day.
+  // Family photos: only the viewer's own browser may keep a copy, for a day
+  // at most, and never past the day the photos are deleted.
+  const keepSeconds = Math.floor((row.created_at + KEEP_MS - now) / 1000);
   return new Response(row.jpeg, {
     headers: {
       'content-type': 'text/plain; charset=utf-8',
-      'cache-control': 'private, max-age=86400',
+      'cache-control': `private, max-age=${Math.max(0, Math.min(86400, keepSeconds))}`,
     },
   });
 };
