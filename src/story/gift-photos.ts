@@ -59,14 +59,34 @@ export async function canReadPhoto(file: File): Promise<boolean> {
   }
 }
 
-/** Saves the photos as a new set and returns its id for the gift link. */
+/**
+ * A save that stopped part way (for example a dropped connection). Trying
+ * again continues the same set instead of leaving its photos behind, as long
+ * as the list has not changed and the set is still open for photos.
+ */
+let unfinished: { id: string; startedAt: number } | null = null;
+/** A little under the server's 30 minute window. */
+const RESUME_WINDOW_MS = 25 * 60 * 1000;
+
+/** Call whenever the list changes: a new save then starts a new set. */
+export function forgetUnfinishedSave(): void {
+  unfinished = null;
+}
+
+/** Saves the photos as a set and returns its id for the gift link. */
 export async function saveGiftPhotos(
   photos: readonly PhotoToSave[],
   onProgress: (saved: number, total: number) => void,
 ): Promise<string> {
-  const created = await fetch(API, { method: 'POST' });
-  if (!created.ok) throw new Error(`Creating the photo set answered ${created.status}.`);
-  const { id } = (await created.json()) as { id: string };
+  let id: string;
+  if (unfinished && Date.now() - unfinished.startedAt < RESUME_WINDOW_MS) {
+    id = unfinished.id;
+  } else {
+    const created = await fetch(API, { method: 'POST' });
+    if (!created.ok) throw new Error(`Creating the photo set answered ${created.status}.`);
+    id = ((await created.json()) as { id: string }).id;
+    unfinished = { id, startedAt: Date.now() };
+  }
   for (let i = 0; i < photos.length; i++) {
     onProgress(i, photos.length);
     const jpeg = await shrinkToJpeg(photos[i].file);
@@ -75,8 +95,10 @@ export async function saveGiftPhotos(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ date: photos[i].date, jpeg }),
     });
-    if (!saved.ok) throw new Error(`Photo ${i + 1} answered ${saved.status}.`);
+    // 409 means this photo already went up in the earlier try.
+    if (!saved.ok && saved.status !== 409) throw new Error(`Photo ${i + 1} answered ${saved.status}.`);
   }
   onProgress(photos.length, photos.length);
+  unfinished = null;
   return id;
 }

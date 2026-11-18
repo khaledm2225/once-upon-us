@@ -4,6 +4,9 @@ import { Leaf, TurnTab } from './book-components.js';
 import { isBusy, startAutoTurn, topLeftLeaf, topRightLeaf } from './book-state.js';
 import { bookEvents } from './page-turn-system.js';
 
+/** Both hands, kept as one list so loops make no garbage each frame. */
+const HANDS = ['left', 'right'] as const;
+
 // The big paper tabs, for weak hands or shaky fingers.
 // A poke (IWSDK adds the Pressed tag) turns one page by itself.
 // After a turn the tab rests: it works again only once every fingertip has
@@ -56,7 +59,7 @@ export class TabSystem extends createSystem({
     if (!object) return Infinity;
     this.box.setFromObject(object);
     let nearest = Infinity;
-    for (const hand of ['left', 'right'] as const) {
+    for (const hand of HANDS) {
       this.player.indexTipSpaces[hand].getWorldPosition(this.tip);
       nearest = Math.min(nearest, this.box.distanceToPoint(this.tip));
     }

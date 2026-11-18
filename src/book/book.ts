@@ -13,6 +13,7 @@ import {
 } from '@iwsdk/core';
 
 import { LAYOUT } from '../layout.js';
+import { groupBoxFaces } from '../paint/geometry.js';
 import { drawCenteredLine, fitFontSize } from '../paint/text.js';
 import {
   COLORS,
@@ -161,21 +162,15 @@ export function buildBook(world: World): Book {
   // Leaves: the cover (index 0) and 5 paper sheets, each on a pivot at the spine.
   const leafGeo = new BoxGeometry(W, LAYOUT.page.thickness, D);
   leafGeo.translate(W / 2, LAYOUT.page.thickness / 2, 0);
-  // Two draw calls per page instead of six: the back face (indices 18 to 23)
-  // uses material 1, everything else uses material 0.
-  leafGeo.clearGroups();
-  leafGeo.addGroup(0, 18, 0);
-  leafGeo.addGroup(18, 6, 1);
-  leafGeo.addGroup(24, 12, 0);
-  // Album sheets print on both faces, so their front face (indices 12 to 17)
-  // gets its own material too: material 2.
+  // Two draw calls per page: the back face uses material 1, every other face
+  // material 0, with the faces regrouped so each material is one run.
   const albumLeafGeo = leafGeo.clone();
-  albumLeafGeo.clearGroups();
-  albumLeafGeo.addGroup(0, 12, 0);
-  albumLeafGeo.addGroup(12, 6, 2);
-  albumLeafGeo.addGroup(18, 6, 1);
-  albumLeafGeo.addGroup(24, 12, 0);
+  groupBoxFaces(leafGeo, [0, 0, 0, 1, 0, 0]);
+  // Album sheets print on both faces, so their front face gets material 2.
+  groupBoxFaces(albumLeafGeo, [0, 0, 2, 1, 0, 0]);
   const coverGeo = new BoxGeometry(W + over, coverT, D + 2 * over);
+  // The cover's cloth edges share one material: three draw calls in all.
+  groupBoxFaces(coverGeo, [0, 0, 2, 3, 0, 0]);
   coverGeo.translate((W + over) / 2, coverT / 2, 0);
   // Box faces in order: +x, -x, +y (front), -y (back), +z, -z.
   const leafMats = [paperMat, paperMat];

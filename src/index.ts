@@ -11,6 +11,7 @@ import { AlbumSystem, setAlbum } from './book/album-system.js';
 import { LARGE_TAB_SCALE, LEAF_COUNT, buildBook } from './book/book.js';
 import { printBookText, textStyle } from './book/page-text.js';
 import { TextRevealSystem, setBookText } from './book/text-reveal-system.js';
+import { topRightLeaf } from './book/book-state.js';
 import { bookEvents } from './book/page-turn-system.js';
 import { PageTurnSystem } from './book/page-turn-system.js';
 import { TabSystem } from './book/tab-system.js';
@@ -113,7 +114,12 @@ World.create(container, projectOptions)
 
   // Pause and resume: back to the saved page at once, saved again on every landing.
   restorePage(book.leaves, loadPage(gift, LEAF_COUNT));
-  bookEvents.addEventListener('land', () => savePage(gift, turnedCount(book.leaves)));
+  // A finished book is saved as closed, so the next reader starts at the cover
+  // (and sees the opening hint); a book left part way resumes where it was.
+  bookEvents.addEventListener('land', () => {
+    const finished = topRightLeaf(book.leaves) === null;
+    savePage(gift, finished ? 0 : turnedCount(book.leaves));
+  });
   // Spread k stands between leaf k−1 (left page) and leaf k (right page).
   for (const scene of [busStopScene(), weddingScene(), firstHomeScene(), busyYearsScene(), todayScene()]) {
     buildScene(world, scene, book.leaves[scene.spread - 1], book.leaves[scene.spread]);

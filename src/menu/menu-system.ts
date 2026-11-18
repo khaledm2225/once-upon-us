@@ -5,6 +5,9 @@ import { playTap } from '../sound/paper-sound.js';
 import { MENU_SETTINGS, type Menu, type MenuButtonView } from './menu.js';
 import { MenuButton } from './menu-components.js';
 
+/** Both hands, kept as one list so loops make no garbage each frame. */
+const HANDS = ['left', 'right'] as const;
+
 // The paper buttons: a poke turns a setting on or off. A press counts only
 // when a fingertip really touches the button from above (IWSDK reports a
 // press 2 cm early), so a hand passing over the row on its way to the book
@@ -63,7 +66,7 @@ export class MenuSystem extends createSystem({
     if (!object) return Infinity;
     this.box.setFromObject(object);
     let nearest = Infinity;
-    for (const hand of ['left', 'right'] as const) {
+    for (const hand of HANDS) {
       this.player.indexTipSpaces[hand].getWorldPosition(this.tip);
       const distance = this.box.distanceToPoint(this.tip);
       if (distance < nearest) {

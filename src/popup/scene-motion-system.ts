@@ -21,11 +21,15 @@ const WINDOW_RATE = 2 * Math.PI * 0.35;
 const SUN_SECONDS = 40;
 const SUN_DROP = 0.05;
 
+/** The first mesh under an entity, found once and remembered. */
+const meshes = new Map<Entity, Mesh | null>();
 function firstMesh(entity: Entity): Mesh | null {
+  if (meshes.has(entity)) return meshes.get(entity) ?? null;
   let found: Mesh | null = null;
   entity.object3D?.traverse((child) => {
     if (!found && (child as Mesh).isMesh) found = child as Mesh;
   });
+  meshes.set(entity, found);
   return found;
 }
 
@@ -78,13 +82,14 @@ export class SceneMotionSystem extends createSystem({
         }
         case MotionKind.Steam: {
           // Three faint wisps rise a little and fade, one after another.
-          object.children.forEach((wisp, i) => {
+          for (let i = 0; i < object.children.length; i++) {
+            const wisp = object.children[i];
             const t = (time * 0.22 + i / object.children.length + seed) % 1;
             wisp.position.y = t * 0.018;
             const material = (wisp as Mesh).material as Material & { opacity: number };
             material.opacity = Math.sin(t * Math.PI) * 0.55 * fade;
             wisp.visible = material.opacity > 0.02;
-          });
+          }
           break;
         }
         case MotionKind.Sun: {
