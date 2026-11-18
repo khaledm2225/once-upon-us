@@ -12,7 +12,7 @@ import {
 
 import { LAYOUT } from '../layout.js';
 import { makeCanvas, toTexture } from '../paint/textures.js';
-import type { Ctx } from './paper-art.js';
+import { type Ctx, setStrongEdges } from './paper-art.js';
 import { MotionKind, PopLayer, SceneMotion } from './popup-components.js';
 
 // Builds the paper layers of each pop-up scene.
@@ -61,6 +61,9 @@ export interface SceneDef {
 }
 
 /** Paints a layer canvas and returns its texture. */
+/** Every painted layer, kept so high contrast can repaint them with outlines. */
+const painted: { layer: LayerDef; texture: CanvasTexture }[] = [];
+
 function layerTexture(layer: LayerDef): CanvasTexture {
   const width = Math.round(SCENE_WIDTH * PX_PER_M);
   const height = Math.round(layer.height * PX_PER_M);
@@ -68,7 +71,21 @@ function layerTexture(layer: LayerDef): CanvasTexture {
   layer.paint(ctx, width, height);
   const texture = toTexture(canvas, Boolean(layer.repeat));
   if (layer.repeat) texture.repeat.set(layer.repeat.x, layer.repeat.y);
+  painted.push({ layer, texture });
   return texture;
+}
+
+/** Repaints every scene layer, for example with high contrast outlines. */
+export function repaintScenes(strong: boolean): void {
+  setStrongEdges(strong);
+  for (const { layer, texture } of painted) {
+    const canvas = texture.image as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    layer.paint(ctx, canvas.width, canvas.height);
+    texture.needsUpdate = true;
+  }
+  setStrongEdges(false);
 }
 
 /** A half plane whose bottom edge sits on the hinge, with UVs for its half. */

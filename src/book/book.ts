@@ -20,6 +20,7 @@ import {
   makeCanvas,
   paintCloth,
   paintPaper,
+  LIGHT_PAPER,
   paperTexture,
   softShadowTexture,
   toTexture,
@@ -52,6 +53,10 @@ export interface Book {
   /** The paper mesh of each leaf; each has its own material list per face. */
   leafMeshes: Mesh[];
   repaintCover(name1: string, name2: string): void;
+  /** Lighter page paper for the high contrast setting. */
+  setLightPaper(light: boolean): void;
+  /** Grows both paper tabs (and their poke areas) for the large tabs setting. */
+  setTabScale(scale: number): void;
 }
 
 const W = LAYOUT.page.width;
@@ -59,6 +64,8 @@ const D = LAYOUT.page.depth;
 
 /** Normal tab size in meters (x across, z along the page edge). */
 export const TAB_SIZE = { x: 0.07, z: 0.1 } as const;
+/** The large tabs setting makes both tabs this much bigger. */
+export const LARGE_TAB_SCALE = 1.6;
 /** Tabs sit toward the far side of the page edge, away from the corners. */
 const TAB_Z = -0.02;
 
@@ -120,7 +127,8 @@ export function buildBook(world: World): Book {
   const bookEntity = world.createTransformEntity(root);
 
   // Shared materials, reused by every page.
-  const paperMat = new MeshLambertMaterial({ map: paperTexture() });
+  const paperTextures = { normal: paperTexture(), light: paperTexture(512, 7, LIGHT_PAPER) };
+  const paperMat = new MeshLambertMaterial({ map: paperTextures.normal });
   const edgeMat = new MeshLambertMaterial({ color: COLORS.paperEdge });
   const clothMat = new MeshLambertMaterial({ map: clothTexture() });
   clothMat.map!.repeat.set(3, 3);
@@ -214,8 +222,9 @@ export function buildBook(world: World): Book {
   // book: one grab zone on the far side and one on the near side. The band
   // beside the forward tab stays free (3 cm each way), so a fingertip there
   // pokes the tab and a pinch elsewhere on the edge holds the cover.
-  const tabFar = TAB_Z - TAB_SIZE.z / 2 - 0.03;
-  const tabNear = TAB_Z + TAB_SIZE.z / 2 + 0.03;
+  // The free band is sized for the large tabs, so it fits both settings.
+  const tabFar = TAB_Z - (TAB_SIZE.z * LARGE_TAB_SCALE) / 2 - 0.03;
+  const tabNear = TAB_Z + (TAB_SIZE.z * LARGE_TAB_SCALE) / 2 + 0.03;
   const edgeFar = -D / 2 - 0.01;
   const edgeNear = D / 2 + 0.01;
   const coverZones = [
@@ -249,11 +258,18 @@ export function buildBook(world: World): Book {
   // turned half around, so its arrow points left. One draw call per tab.
   const tabGeo = new BoxGeometry(TAB_SIZE.x, 0.002, TAB_SIZE.z);
   const tabMat = new MeshLambertMaterial({ map: tabArrowTexture(1) });
+  const tabs: Mesh[] = [];
+  const placeTab = (tab: Mesh, direction: 1 | -1, scale: number) => {
+    tab.scale.set(scale, 1, scale);
+    tab.position.x = direction * (W + over + (TAB_SIZE.x * scale) / 2 - 0.004);
+  };
   for (const direction of [1, -1] as const) {
     const tab = new Mesh(tabGeo, tabMat);
     if (direction === -1) tab.rotation.y = Math.PI;
     tab.name = direction === 1 ? 'tab-forward' : 'tab-back';
-    tab.position.set(direction * (W + over + TAB_SIZE.x / 2 - 0.004), 0.003, TAB_Z);
+    tab.position.set(0, 0.003, TAB_Z);
+    placeTab(tab, direction, 1);
+    tabs.push(tab);
     const tabEntity = world.createTransformEntity(tab, { parent: bookEntity });
     tabEntity.addComponent(TurnTab, { direction });
     tabEntity.addComponent(PokeInteractable);
@@ -278,5 +294,12 @@ export function buildBook(world: World): Book {
     leaves,
     leafMeshes,
     repaintCover: (name1, name2) => paintCover(coverTexture, name1, name2),
+    setLightPaper: (light) => {
+      paperMat.map = light ? paperTextures.light : paperTextures.normal;
+      paperMat.needsUpdate = true;
+    },
+    setTabScale: (scale) => {
+      tabs.forEach((tab, i) => placeTab(tab, i === 0 ? 1 : -1, scale));
+    },
   };
 }

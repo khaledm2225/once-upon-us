@@ -8,6 +8,8 @@ import {
   readGift,
   writeGift,
 } from '../story/personalize.js';
+import { type SettingKey, canReadAloud, onSettings, onVoicesChanged, setSetting } from '../settings/settings.js';
+import { unlockAudio } from '../sound/paper-sound.js';
 import { setupPhotoPicker } from './photo-picker.js';
 
 // Shown when the browser can't open an immersive VR session (approved wording).
@@ -30,6 +32,8 @@ export function setupStartPage(world: World): void {
   // launchXR runs inside the click itself, because browsers only open
   // VR in direct answer to a real user gesture.
   button.addEventListener('click', () => {
+    // The same click wakes the paper sounds, which browsers allow only now.
+    unlockAudio();
     world.launchXR();
   });
 
@@ -54,6 +58,24 @@ export function setupStartPage(world: World): void {
       }
     })
     .catch(showNoVR);
+}
+
+/** The reading switches on the start page, kept in step with the menu in VR. */
+export function setupReadingSwitches(): void {
+  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[data-setting]'));
+  for (const input of inputs) {
+    input.addEventListener('change', () => setSetting(input.dataset.setting as SettingKey, input.checked));
+  }
+  onSettings((settings) => {
+    for (const input of inputs) input.checked = settings[input.dataset.setting as SettingKey];
+  });
+  // Read aloud shows only where the browser has a voice; voices can arrive late.
+  const readAloud = document.getElementById('read-aloud-switch') as HTMLElement;
+  const check = () => {
+    readAloud.hidden = !canReadAloud();
+  };
+  check();
+  onVoicesChanged(check);
 }
 
 /** Shown if the book fails to build, so the page never just sits there. */

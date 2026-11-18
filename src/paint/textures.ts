@@ -107,9 +107,12 @@ export function paintPaper(
   }
 }
 
-export function paperTexture(size = 512, seed = 7): CanvasTexture {
+/** Lighter cream paper for the high contrast setting. */
+export const LIGHT_PAPER = '#f8f1e4';
+
+export function paperTexture(size = 512, seed = 7, color: string = COLORS.paper): CanvasTexture {
   const [canvas, ctx] = makeCanvas(size, size);
-  paintPaper(ctx, size, size, COLORS.paper, seed);
+  paintPaper(ctx, size, size, color, seed);
   return toTexture(canvas, true);
 }
 

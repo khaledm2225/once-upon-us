@@ -8,14 +8,14 @@ import projectOptions from 'virtual:iwsdk-project';
 
 import { buildAlbum } from './book/album-pages.js';
 import { AlbumSystem, setAlbum } from './book/album-system.js';
-import { LEAF_COUNT, buildBook } from './book/book.js';
-import { printBookText } from './book/page-text.js';
+import { LARGE_TAB_SCALE, LEAF_COUNT, buildBook } from './book/book.js';
+import { printBookText, textStyle } from './book/page-text.js';
 import { TextRevealSystem, setBookText } from './book/text-reveal-system.js';
 import { bookEvents } from './book/page-turn-system.js';
 import { PageTurnSystem } from './book/page-turn-system.js';
 import { TabSystem } from './book/tab-system.js';
 import { loadFonts } from './paint/text.js';
-import { buildScene } from './popup/popup-builder.js';
+import { buildScene, repaintScenes } from './popup/popup-builder.js';
 import { PopUpSystem } from './popup/popup-system.js';
 import { SceneMotionSystem } from './popup/scene-motion-system.js';
 import { busStopScene } from './popup/scenes/bus-stop.js';
@@ -24,9 +24,14 @@ import { firstHomeScene } from './popup/scenes/first-home.js';
 import { todayScene } from './popup/scenes/today.js';
 import { weddingScene } from './popup/scenes/wedding.js';
 import { setTextureQuality } from './paint/textures.js';
+import { buildMenu } from './menu/menu.js';
+import { MenuSystem, setMenu } from './menu/menu-system.js';
+import { OnboardingSystem, buildHandHint } from './onboarding/onboarding-system.js';
 import { buildRoom } from './room/room.js';
+import { PaperSoundSystem } from './sound/paper-sound-system.js';
+import { onSettings } from './settings/settings.js';
 import { SessionSystem } from './session/session-system.js';
-import { setupGiftForm, setupStartPage, showStartError } from './start/start-page.js';
+import { setupGiftForm, setupReadingSwitches, setupStartPage, showStartError } from './start/start-page.js';
 import { loadPage, restorePage, savePage, turnedCount } from './state/progress.js';
 import { demoAlbum } from './story/album.js';
 import { fetchGiftAlbum } from './story/gift-photos.js';
@@ -72,6 +77,7 @@ setupGiftForm((next) => {
   gift = next;
   applyToBook?.(next);
 });
+setupReadingSwitches();
 
 World.create(container, projectOptions)
   .then(async (world) => {
@@ -118,6 +124,31 @@ World.create(container, projectOptions)
   world.registerSystem(SceneMotionSystem);
   world.registerSystem(AlbumSystem);
   world.registerSystem(TextRevealSystem);
+  world.registerSystem(MenuSystem);
+  world.registerSystem(OnboardingSystem);
+  world.registerSystem(PaperSoundSystem);
+  buildHandHint(world, book);
+
+  // The reader's settings: bigger text, stronger contrast and bigger tabs
+  // reprint the book at once, from the start page or the paper menu in VR.
+  setMenu(buildMenu(world));
+  let printed = 'false-false';
+  let outlined = false;
+  onSettings((settings) => {
+    const look = `${settings.largeText}-${settings.highContrast}`;
+    if (look !== printed) {
+      printed = look;
+      const style = textStyle(settings.largeText, settings.highContrast);
+      text.restyle(style);
+      album.restyle(style);
+      book.setLightPaper(settings.highContrast);
+    }
+    if (settings.highContrast !== outlined) {
+      outlined = settings.highContrast;
+      repaintScenes(outlined);
+    }
+    book.setTabScale(settings.largeTabs ? LARGE_TAB_SCALE : 1);
+  });
   world.registerSystem(SessionSystem);
 
   // Hand rays draw a laser line and a cursor (a sci fi look), so they are off.

@@ -12,12 +12,12 @@ import {
 
 import { LAYOUT } from '../layout.js';
 import { setFont } from '../paint/text.js';
-import { COLORS, bestAnisotropy, makeCanvas, toTexture } from '../paint/textures.js';
+import { bestAnisotropy, makeCanvas, toTexture } from '../paint/textures.js';
 import { ALBUM_SIZE, type AlbumPhoto } from '../story/album.js';
 import { AlbumPrint } from './album-components.js';
 import { Leaf } from './book-components.js';
 import { FIRST_ALBUM_LEAF, LEAF_COUNT, type Book } from './book.js';
-import { NORMAL_TEXT, PAGE_PX, paperBase } from './page-text.js';
+import { NORMAL_TEXT, PAGE_PX, type TextStyle, paperBase } from './page-text.js';
 
 // The photo album after the story: two photos on each page, like prints held
 // by dark paper photo corners, with the date under each one in the book's font.
@@ -36,7 +36,7 @@ const BORDER = 16;
 const CORNER = 46;
 /** Room around the print for its shadow and, below it, its date. */
 const SHADOW_ROOM = 28;
-const DATE_ROOM = Math.round(20 + NORMAL_TEXT.size * 1.25);
+const dateRoom = (style: TextStyle) => Math.round(20 + style.size * 1.25);
 /** A slight hand placed tilt, top print and bottom print (radians). */
 const TILTS = [-0.016, 0.012] as const;
 const PRINT_COLOR = '#f6efe1';
@@ -62,12 +62,17 @@ export interface PrintSlot {
   /** Where the slow camera move drifts toward inside the photo (0 to 1). */
   anchor: { x: number; y: number };
   hasPhoto: boolean;
+  /** The photo and date shown now, kept to reprint the date in a new style. */
+  image: HTMLImageElement | null;
+  date: string;
 }
 
 export interface Album {
   slots: PrintSlot[];
   /** Shows these photos (or none), replacing what the album showed before. */
   show(photos: readonly AlbumPhoto[] | Promise<readonly AlbumPhoto[]>): void;
+  /** Reprints the dates in a new style (bigger text, stronger contrast). */
+  restyle(next: TextStyle): void;
 }
 
 function drawCorner(ctx: CanvasRenderingContext2D, x: number, y: number, sx: number, sy: number): void {
@@ -96,10 +101,10 @@ function drawCorner(ctx: CanvasRenderingContext2D, x: number, y: number, sx: num
  * The frame of one print: its shadow, cream border, four photo corners and
  * the date below. The middle stays see-through, where the photo shows.
  */
-function frameCanvas(dw: number, dh: number, date: string): HTMLCanvasElement {
+function frameCanvas(dw: number, dh: number, date: string, style: TextStyle): HTMLCanvasElement {
   const pw = dw + BORDER * 2;
   const ph = dh + BORDER * 2;
-  const [canvas, ctx] = makeCanvas(pw + SHADOW_ROOM * 2, ph + SHADOW_ROOM + Math.max(SHADOW_ROOM, DATE_ROOM));
+  const [canvas, ctx] = makeCanvas(pw + SHADOW_ROOM * 2, ph + SHADOW_ROOM + Math.max(SHADOW_ROOM, dateRoom(style)));
   const x0 = SHADOW_ROOM;
   const y0 = SHADOW_ROOM;
   ctx.save();
@@ -118,11 +123,11 @@ function frameCanvas(dw: number, dh: number, date: string): HTMLCanvasElement {
     drawCorner(ctx, x0 + ((sx + 1) / 2) * pw, y0 + ((sy + 1) / 2) * ph, sx, sy);
   }
   ctx.restore();
-  setFont(ctx, NORMAL_TEXT.size, 400);
-  ctx.fillStyle = COLORS.ink;
+  setFont(ctx, style.size, style.weight);
+  ctx.fillStyle = style.ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(date, canvas.width / 2, y0 + ph + 20 + NORMAL_TEXT.size * 0.8);
+  ctx.fillText(date, canvas.width / 2, y0 + ph + 20 + style.size * 0.8);
   return canvas;
 }
 
@@ -144,8 +149,10 @@ const ANCHORS = [
 ] as const;
 
 /** Gives each album page plain paper and a place for its two prints. */
-export function buildAlbum(world: World, book: Book): Album {
-  const plain = toTexture(paperBase(NORMAL_TEXT.paper));
+export function buildAlbum(world: World, book: Book, initial: TextStyle = NORMAL_TEXT): Album {
+  let style = initial;
+  let plain = toTexture(paperBase(style.paper));
+  const pageMaterials: MeshLambertMaterial[] = [];
   const pages: { leaf: number; back: boolean }[] = [{ leaf: FIRST_ALBUM_LEAF - 1, back: true }];
   for (let leaf = FIRST_ALBUM_LEAF; leaf < LEAF_COUNT; leaf++) {
     pages.push({ leaf, back: false }, { leaf, back: true });
@@ -154,6 +161,7 @@ export function buildAlbum(world: World, book: Book): Album {
   const slots: PrintSlot[] = [];
   pages.forEach(({ leaf, back }, page) => {
     const material = new MeshLambertMaterial({ map: plain });
+    pageMaterials.push(material);
     const materials = book.leafMeshes[leaf].material as MeshLambertMaterial[];
     materials[back ? 1 : 2] = material;
 
@@ -193,6 +201,8 @@ export function buildAlbum(world: World, book: Book): Album {
         restY,
         anchor: ANCHORS[index % ANCHORS.length],
         hasPhoto: false,
+        image: null,
+        date: '',
       });
     }
   });
@@ -204,7 +214,7 @@ export function buildAlbum(world: World, book: Book): Album {
     const dh = Math.round(image.naturalHeight * scale);
     const half = slot.index % 2;
     const slotHeight = PAGE_PX.h / 2;
-    const blockHeight = BOX.h + BORDER * 2 + DATE_ROOM;
+    const blockHeight = BOX.h + BORDER * 2 + dateRoom(style);
     const printTop = half * slotHeight + (slotHeight - blockHeight) / 2 + (BOX.h - dh) / 2;
     const ph = dh + BORDER * 2;
     const cx = PAGE_PX.w / 2;
@@ -224,7 +234,7 @@ export function buildAlbum(world: World, book: Book): Album {
     slot.photoMaterial.needsUpdate = true;
     slot.photo.scale.set(dw / PX_PER_M, dh / PX_PER_M, 1);
 
-    const canvas = frameCanvas(dw, dh, date);
+    const canvas = frameCanvas(dw, dh, date, style);
     slot.frameMaterial.map?.dispose();
     const frameTexture = toTexture(canvas);
     slot.frameMaterial.map = frameTexture;
@@ -237,6 +247,8 @@ export function buildAlbum(world: World, book: Book): Album {
     const extraBelow = canvas.height - (ph + SHADOW_ROOM * 2);
     slot.frame.position.y = -extraBelow / 2 / PX_PER_M;
     slot.hasPhoto = true;
+    slot.image = image;
+    slot.date = date;
   };
 
   /**
@@ -258,6 +270,7 @@ export function buildAlbum(world: World, book: Book): Album {
     const mine = ++generation;
     for (const slot of slots) {
       slot.hasPhoto = false;
+      slot.image = null;
       slot.group.visible = false;
     }
     let photos: readonly AlbumPhoto[] = [];
@@ -283,6 +296,18 @@ export function buildAlbum(world: World, book: Book): Album {
 
   return {
     slots,
+    restyle: (next) => {
+      if (next.paper !== style.paper) {
+        plain.dispose();
+        plain = toTexture(paperBase(next.paper));
+        for (const material of pageMaterials) {
+          material.map = plain;
+          material.needsUpdate = true;
+        }
+      }
+      style = next;
+      for (const slot of slots) if (slot.image) place(slot, slot.image, slot.date);
+    },
     show: (photos) => {
       show(photos).catch((error: unknown) => console.warn('The photo album could not load.', error));
     },
