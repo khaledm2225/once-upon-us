@@ -107,7 +107,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
           if (removedLastSaved && hasSavedPhotos()) {
             onSaved('');
             saved = false;
-            say('The photos were taken off this gift link.');
+            say('The photos were taken off this gift link. The old link still shows them until they are deleted after 30 days.');
             refresh();
           }
         });
