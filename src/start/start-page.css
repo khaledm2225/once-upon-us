@@ -1,0 +1,84 @@
+/* Start page: cream paper on a warm, dim room color. No gradients, no glass. */
+
+:root {
+  --room: #3a2418;
+  --paper: #f6e7cf;
+  --ink: #3b2414;
+  --terracotta: #b73206;
+  --terracotta-pressed: #96290a;
+  --paper-text: #fff4e6;
+  --muted-ink: #6b4a33;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--room);
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+#scene-container {
+  position: fixed;
+  inset: 0;
+}
+
+#start-page {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--room);
+}
+
+#start-page[hidden] {
+  display: none;
+}
+
+.start-card {
+  width: min(100%, 520px);
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 40px 32px;
+  box-sizing: border-box;
+  text-align: center;
+  box-shadow: 0 18px 40px rgba(20, 10, 4, 0.35);
+}
+
+.start-card h1 {
+  margin: 0 0 32px;
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+#enter-vr {
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--paper-text);
+  background: var(--terracotta);
+  border: none;
+  border-radius: 6px;
+  padding: 18px 44px;
+  min-height: 64px;
+  cursor: pointer;
+}
+
+#enter-vr:active {
+  background: var(--terracotta-pressed);
+}
+
+#enter-vr:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+#start-note {
+  margin: 20px 0 0;
+  font-size: 1.15rem;
+  color: var(--muted-ink);
+}
