@@ -46,10 +46,14 @@ export function seededRandom(seed: number): () => number {
   };
 }
 
-export function toTexture(canvas: HTMLCanvasElement, repeat = false): CanvasTexture {
+/**
+ * sharp = true gives text and paper the GPU's best angled filtering; floors,
+ * walls, wood, cloth and shadows use a cheaper level.
+ */
+export function toTexture(canvas: HTMLCanvasElement, repeat = false, sharp = true): CanvasTexture {
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
-  texture.anisotropy = maxAnisotropy;
+  texture.anisotropy = sharp ? maxAnisotropy : Math.min(4, maxAnisotropy);
   if (repeat) {
     texture.wrapS = RepeatWrapping;
     texture.wrapT = RepeatWrapping;
@@ -132,7 +136,7 @@ export function paintCloth(
 export function clothTexture(size = 256): CanvasTexture {
   const [canvas, ctx] = makeCanvas(size, size);
   paintCloth(ctx, size, size);
-  return toTexture(canvas, true);
+  return toTexture(canvas, true, false);
 }
 
 /** Warm wood with long soft grain lines. */
@@ -159,7 +163,7 @@ export function woodTexture(width = 512, height = 512): CanvasTexture {
     }
     ctx.stroke();
   }
-  return toTexture(canvas, true);
+  return toTexture(canvas, true, false);
 }
 
 /** Plain warm surface with very faint speckles, for walls and floor. */
@@ -173,7 +177,7 @@ export function surfaceTexture(base: string, seed: number, size = 256): CanvasTe
       random() < 0.5 ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 230, 200, 0.03)';
     ctx.fillRect(random() * size, random() * size, 1 + random() * 2, 1 + random() * 2);
   }
-  return toTexture(canvas, true);
+  return toTexture(canvas, true, false);
 }
 
 /**
@@ -194,5 +198,5 @@ export function softShadowTexture(
   ctx.beginPath();
   ctx.roundRect(inset, inset, width - inset * 2, height - inset * 2, radius);
   ctx.fill();
-  return toTexture(canvas);
+  return toTexture(canvas, false, false);
 }

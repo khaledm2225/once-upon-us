@@ -38,9 +38,18 @@ export function setupStartPage(world: World): void {
     .then((supported) => {
       if (supported) {
         button.disabled = false;
+        note.hidden = true;
       } else {
         showNoVR();
       }
     })
     .catch(showNoVR);
+}
+
+/** Shown if the book fails to build, so the page never just sits there. */
+export function showStartError(): void {
+  const note = document.getElementById('start-note') as HTMLElement | null;
+  if (!note) return;
+  note.textContent = 'Something went wrong while opening the book. Please reload the page.';
+  note.hidden = false;
 }

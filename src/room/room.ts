@@ -56,6 +56,20 @@ export function buildRoom(world: World): Room {
     wall.position.set(side * LAYOUT.room.sideWallX, LAYOUT.floorY + 1.6, -0.2);
     room.add(wall);
   }
+  // A wall behind the user and a ceiling close the room, so no empty
+  // color shows anywhere the user looks.
+  const rearWall = new Mesh(wallGeo, wallMat);
+  rearWall.rotation.y = Math.PI;
+  rearWall.position.set(0, LAYOUT.floorY + 1.6, 1.6);
+  room.add(rearWall);
+  const ceiling = new Mesh(new PlaneGeometry(4, 4), wallMat);
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.set(0, LAYOUT.floorY + 2.7, -0.2);
+  room.add(ceiling);
+  // The big surfaces draw after the table and the book, which cover most of them.
+  for (const surface of [floor, backWall, rearWall, ceiling, ...room.children.filter((c) => c !== floor && (c as Mesh).geometry === wallGeo)]) {
+    surface.renderOrder = 1;
+  }
 
   // Table: a wooden top on four legs.
   const wood = woodTexture();

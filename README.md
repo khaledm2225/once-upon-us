@@ -8,6 +8,8 @@ The demo couple, Grace and Henry, is fictional.
 
 Built for the Meta VR Start Developer Competition 2026, Entertainment track, with Meta's Immersive Web SDK (IWSDK) and TypeScript.
 
+Live link: https://once-upon-us-7yf.pages.dev
+
 ## What you need
 
 - Node.js 20.19 or later in the 20 line, 22.12 or later in the 22 line, or 24 or later.
