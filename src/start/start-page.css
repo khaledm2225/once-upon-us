@@ -82,3 +82,64 @@ body {
   font-size: 1.15rem;
   color: var(--muted-ink);
 }
+
+.gift {
+  text-align: left;
+  margin: 0 0 28px;
+}
+
+.gift fieldset {
+  border: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+
+.gift legend,
+.gift label {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.gift .names {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gift .names span {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.gift input,
+.gift textarea {
+  font: inherit;
+  font-size: 1.15rem;
+  color: var(--ink);
+  background: #fffaf1;
+  border: 2px solid #c9b08c;
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.gift input {
+  flex: 1;
+  min-height: 48px;
+}
+
+.gift textarea {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.gift input:focus-visible,
+.gift textarea:focus-visible,
+#enter-vr:focus-visible {
+  outline: 3px solid var(--terracotta);
+  outline-offset: 2px;
+}

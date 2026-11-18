@@ -58,7 +58,7 @@ const D = LAYOUT.page.depth;
 /** Normal tab size in meters (x across, z along the page edge). */
 export const TAB_SIZE = { x: 0.07, z: 0.1 } as const;
 /** Tabs sit toward the far side of the page edge, away from the corners. */
-const TAB_Z = -0.06;
+const TAB_Z = -0.02;
 
 /** A paper tab with a bold ink arrow: right for forward, left for back. */
 function tabArrowTexture(direction: 1 | -1): CanvasTexture {
@@ -192,14 +192,16 @@ export function buildBook(world: World): Book {
   // page plane, so it reaches the palm above the page on either side.
   // PageTurnSystem keeps only the top page on each side grabbable.
   const handleMat = new MeshBasicMaterial({ visible: false });
-  const handleGeo = new BoxGeometry(0.12, 0.12, 0.12);
+  // Page corner boxes reach a little past the near edge, toward the hand,
+  // which keeps them well apart from the paper tabs.
+  const handleGeo = new BoxGeometry(0.12, 0.12, 0.08);
   // The cover opens from anywhere along its outer edge, like a real book.
   const coverEdgeGeo = new BoxGeometry(0.1, 0.12, D + 0.02);
   leaves.forEach((leafEntity, index) => {
     const handle = new Mesh(index === 0 ? coverEdgeGeo : handleGeo, handleMat);
     handle.name = index === 0 ? 'cover-corner' : `leaf-${index}-corner`;
     if (index === 0) handle.position.set(W - 0.03, 0, 0);
-    else handle.position.set(W - 0.02, 0, D / 2 - 0.02);
+    else handle.position.set(W - 0.02, 0, D / 2 + 0.01);
     const handleEntity = world.createTransformEntity(handle, { parent: leafEntity });
     handleEntity.addComponent(CornerHandle, { leaf: leafEntity });
     handleEntity.addComponent(OneHandGrabbable, { rotate: false, translate: false });
@@ -207,11 +209,13 @@ export function buildBook(world: World): Book {
 
   // Large paper tabs for a poke: forward on the right edge, back on the left.
   // They sit toward the far side, well apart from the corner grab boxes.
+  // One shared paper material with the arrow; the back tab is the same tab
+  // turned half around, so its arrow points left. One draw call per tab.
   const tabGeo = new BoxGeometry(TAB_SIZE.x, 0.002, TAB_SIZE.z);
+  const tabMat = new MeshLambertMaterial({ map: tabArrowTexture(1) });
   for (const direction of [1, -1] as const) {
-    const tabMat = new MeshLambertMaterial({ map: paperTexture(256, 31) });
-    const topMat = new MeshLambertMaterial({ map: tabArrowTexture(direction) });
-    const tab = new Mesh(tabGeo, [tabMat, tabMat, topMat, tabMat, tabMat, tabMat]);
+    const tab = new Mesh(tabGeo, tabMat);
+    if (direction === -1) tab.rotation.y = Math.PI;
     tab.name = direction === 1 ? 'tab-forward' : 'tab-back';
     tab.position.set(direction * (W + over + TAB_SIZE.x / 2 - 0.004), 0.003, TAB_Z);
     const tabEntity = world.createTransformEntity(tab, { parent: bookEntity });

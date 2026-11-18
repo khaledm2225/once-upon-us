@@ -1,6 +1,6 @@
-import { type Entity, GrabSystem, Grabbed, Vector3, createSystem } from '@iwsdk/core';
+import { type Entity, GrabSystem, Grabbed, Pressed, Vector3, createSystem } from '@iwsdk/core';
 
-import { CornerHandle, Leaf, LeafState } from './book-components.js';
+import { CornerHandle, Leaf, LeafState, TurnTab } from './book-components.js';
 import { isBusy, topLeftLeaf, topRightLeaf } from './book-state.js';
 
 // Turning a page by hand.
@@ -56,6 +56,7 @@ export class PageTurnSystem extends createSystem({
   leaves: { required: [Leaf] },
   handles: { required: [CornerHandle] },
   heldHandles: { required: [CornerHandle, Grabbed] },
+  pressedTabs: { required: [TurnTab, Pressed] },
 }) {
   private readonly handWorld = new Vector3();
   private readonly handLocal = new Vector3();
@@ -94,6 +95,19 @@ export class PageTurnSystem extends createSystem({
     if (!leaf) return;
     const grabSystem = this.world.getSystem(GrabSystem);
     const hand: Hand = grabSystem?.getHolderHand(handle) ?? 'right';
+    // One page at a time, even when two pinches land in the same moment or a
+    // pinch lands while a fingertip is poking a tab: such a grab is let go at once.
+    let otherMoving = false;
+    for (const other of this.queries.leaves.entities) {
+      if (other !== leaf && other.getValue(Leaf, 'state') !== LeafState.Rest) otherMoving = true;
+    }
+    // Only a real poke in progress counts: IWSDK's touch mode starts 15 cm away,
+    // which would also block normal pinches near a tab.
+    const poking = this.queries.pressedTabs.entities.size > 0;
+    if (otherMoving || poking || leaf.getValue(Leaf, 'state') === LeafState.Settling) {
+      grabSystem?.forceRelease(handle);
+      return;
+    }
     const angle = this.handAngle(leaf, hand);
     this.grabs.set(handle, { leaf, hand, previousHandAngle: angle ?? 0 });
     this.settles.delete(leaf);
