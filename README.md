@@ -2,7 +2,7 @@
 
 A pop-up book in virtual reality that tells the love story of an elderly couple.
 
-Grandchildren make it as a gift: they type their grandparents' names and a dedication, add up to 10 family photos with their dates, and send the link. The grandparents sit at a table in VR, open the book with their own hands, and turn the pages. On every page a paper scene unfolds and stands up, like a real pop-up book, and the words appear line by line. After the story, a photo album shows the family photos, set down one by one with a slow film-like camera move.
+Grandchildren make it as a gift: they type their grandparents' names and a dedication, add up to 10 family photos with their dates, and send the link. The grandparents sit at a table in VR, open the book with their own hands, and turn the pages. On each of the 5 story pages, one of the family photos stands up from the fold as a printed photo, like a real pop-up book, and the words appear line by line. After the story, a photo album shows the family photos one by one. Each photo rises, its date writes itself across it in warm letters, and it glides into place with a soft musical swell. Then a slow film-like camera move drifts from photo to photo.
 
 The demo couple, Grace and Henry, is fictional. The demo album photos are AI-generated images of these fictional people.
 
@@ -12,7 +12,7 @@ The demo couple, Grace and Henry, is fictional. The demo album photos are AI-gen
 - **The first minute.** The closed cover lifts softly every few seconds, and a small paper hand shows the pinch. Both stop after the first pinch.
 - **Reading settings.** Large text, high contrast (darker ink on lighter paper), large page arrows and read aloud. Change them on the start page or with the paper buttons in front of the book. They are saved on the device.
 - **Read aloud** appears only where the browser has a voice to read with.
-- **Sound.** Paper sounds are made in code with Web Audio: a lift, a turn, a soft thump when a page lands, and quiet rain on the first page. A Sound switch on the start page turns them off.
+- **Sound.** Sounds are made in code with Web Audio: a lift, a turn, a soft thump when a page lands, quiet rain on the first page, and a soft warm swell as each album photo rises. A Sound switch on the start page turns them off.
 
 Built for the Meta VR Start Developer Competition 2026, Entertainment track, with Meta's Immersive Web SDK (IWSDK) and TypeScript.
 

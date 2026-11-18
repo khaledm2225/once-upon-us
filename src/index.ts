@@ -19,11 +19,7 @@ import { loadFonts } from './paint/text.js';
 import { buildScene, repaintScenes } from './popup/popup-builder.js';
 import { PopUpSystem } from './popup/popup-system.js';
 import { SceneMotionSystem } from './popup/scene-motion-system.js';
-import { busStopScene } from './popup/scenes/bus-stop.js';
-import { busyYearsScene } from './popup/scenes/busy-years.js';
-import { firstHomeScene } from './popup/scenes/first-home.js';
-import { todayScene } from './popup/scenes/today.js';
-import { weddingScene } from './popup/scenes/wedding.js';
+import { photoScene, setStoryPhotos } from './popup/scenes/photo-scene.js';
 import { setTextureQuality } from './paint/textures.js';
 import { buildMenu } from './menu/menu.js';
 import { MenuSystem, setMenu } from './menu/menu-system.js';
@@ -43,6 +39,8 @@ const ROOM_COLOR = '#211f1d';
 // Quest blurs the edges of the view to save power (foveation). Text is the
 // heart of the book, so we ask for a gentler level than the maximum.
 const FOVEATION = 0.5;
+/** The demo photo shown on each story page: the umbrella, the wedding, the first home, the family dinner, the sunset bench. */
+const DEMO_STORY_PHOTOS = [0, 2, 3, 5, 9] as const;
 
 const container = document.getElementById('scene-container') as HTMLDivElement;
 
@@ -105,8 +103,15 @@ World.create(container, projectOptions)
     const source = next.photos || (isDefaultGift(next) ? 'demo' : 'none');
     if (source !== albumSource) {
       albumSource = source;
-      if (next.photos) album.show(fetchGiftAlbum(next.photos));
-      else album.show(source === 'demo' ? demoAlbum : []);
+      // The story pages show the same real photos as the album, one per page.
+      if (next.photos) {
+        const photos = fetchGiftAlbum(next.photos);
+        album.show(photos);
+        photos.then((list) => setStoryPhotos(list.map((photo) => photo.src))).catch(() => setStoryPhotos([]));
+      } else {
+        album.show(source === 'demo' ? demoAlbum : []);
+        setStoryPhotos(source === 'demo' ? DEMO_STORY_PHOTOS.map((n) => demoAlbum[n].src) : []);
+      }
     }
   };
   applyGift(gift);
@@ -121,7 +126,7 @@ World.create(container, projectOptions)
     savePage(gift, finished ? 0 : turnedCount(book.leaves));
   });
   // Spread k stands between leaf k−1 (left page) and leaf k (right page).
-  for (const scene of [busStopScene(), weddingScene(), firstHomeScene(), busyYearsScene(), todayScene()]) {
+  for (const scene of [1, 2, 3, 4, 5].map(photoScene)) {
     buildScene(world, scene, book.leaves[scene.spread - 1], book.leaves[scene.spread]);
   }
   world.registerSystem(PageTurnSystem);
