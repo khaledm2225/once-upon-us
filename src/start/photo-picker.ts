@@ -1,15 +1,20 @@
-import { ALBUM_SIZE, MONTHS, dateLabel } from '../story/album.js';
+import { ALBUM_SIZE, MONTHS, dateLabel, demoAlbum, readDateLabel } from '../story/album.js';
 import { canReadPhoto, forgetUnfinishedSave, saveGiftPhotos } from '../story/gift-photos.js';
 
 // The family photos on the start page: up to 10 photos, each with its month
 // (optional) and year. "Save photos" sends them to the server as one new set,
 // and its id joins the gift link. Until then nothing leaves the device.
+// "Use sample photos" fills the list with the demo album (AI generated
+// pictures of the fictional Grace and Henry), so anyone can try a gift
+// without their own photos.
 
 interface Row {
   file: File;
   thumb: string;
   month: number | null;
   year: number | null;
+  /** The demo album file this row came from, for sample photos. */
+  sample?: string;
 }
 
 const FIRST_YEAR = 1850;
@@ -18,6 +23,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
   const list = document.getElementById('photo-list') as HTMLUListElement;
   const input = document.getElementById('photo-input') as HTMLInputElement;
   const addButton = document.getElementById('add-photos') as HTMLButtonElement;
+  const sampleButton = document.getElementById('sample-photos') as HTMLButtonElement;
   const saveButton = document.getElementById('save-photos') as HTMLButtonElement;
   const status = document.getElementById('photo-status') as HTMLElement;
   const lastYear = new Date().getFullYear();
@@ -35,6 +41,7 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
 
   const refresh = () => {
     addButton.disabled = saving || adding || rows.length >= ALBUM_SIZE;
+    sampleButton.disabled = addButton.disabled;
     saveButton.hidden = rows.length === 0 || saved;
     saveButton.disabled = saving || adding;
   };
@@ -146,6 +153,39 @@ export function setupPhotoPicker(hasSavedPhotos: () => boolean, onSaved: (id: st
     if (unreadable > 0) say('Some photos could not be read. Please choose JPEG or PNG photos.');
     else if (skipped > 0) say(`A book holds up to ${ALBUM_SIZE} photos. The first ones were added.`);
     else say('Add the year of each photo, then save.');
+  });
+
+  sampleButton.addEventListener('click', async () => {
+    adding = true;
+    refresh();
+    let added = 0;
+    let failed = 0;
+    for (const photo of demoAlbum) {
+      if (rows.length >= ALBUM_SIZE) break;
+      // Trying again only fills in the sample photos that are still missing.
+      if (rows.some((row) => row.sample === photo.src)) continue;
+      try {
+        const response = await fetch(photo.src);
+        if (!response.ok) throw new Error(`The sample photo answered ${response.status}.`);
+        const blob = await response.blob();
+        const file = new File([blob], photo.src.slice(photo.src.lastIndexOf('/') + 1), { type: 'image/jpeg' });
+        const { month, year } = readDateLabel(photo.date);
+        rows.push({ file, thumb: URL.createObjectURL(file), month, year, sample: photo.src });
+        added++;
+      } catch (error) {
+        console.warn(error);
+        failed++;
+      }
+    }
+    adding = false;
+    changed();
+    render();
+    if (!saveButton.hidden) saveButton.focus();
+    if (failed > 0) say('Some sample photos could not be loaded. Please try again.');
+    else
+      say(
+        `${added === 1 ? '1 sample photo was' : `${added} sample photos were`} added: AI generated pictures of the fictional Grace and Henry. Press Save photos to put them in this gift.`,
+      );
   });
 
   saveButton.addEventListener('click', async () => {

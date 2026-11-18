@@ -334,12 +334,13 @@ body {
 
 .photo-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin: 0 0 12px;
 }
 
 button.secondary {
-  flex: 1;
+  flex: 1 1 9rem;
   min-height: 60px;
   font: inherit;
   font-size: 1.125rem;
